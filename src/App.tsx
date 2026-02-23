@@ -1,35 +1,81 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useReducer, useState, useCallback } from 'react';
+import type { GameState } from './engine/types';
+import type { GameAction } from './engine/actions';
+import { gameReducer, GameError } from './engine/reducer';
+import { createInitialState } from './engine/state';
+import { SetupScreen } from './ui/components/Setup/SetupScreen';
+import { Game } from './ui/components/Game';
 
-function App() {
-  const [count, setCount] = useState(0)
+type InternalAction = GameAction | { type: '__RESET__'; state: GameState };
 
-  return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+function internalReducer(state: GameState, action: InternalAction): GameState {
+  if (action.type === '__RESET__') {
+    return (action as { type: '__RESET__'; state: GameState }).state;
+  }
+  return gameReducer(state, action as GameAction);
 }
 
-export default App
+function App() {
+  const [gameStarted, setGameStarted] = useState(false);
+  const [state, rawDispatch] = useReducer(
+    internalReducer,
+    null as unknown as GameState,
+    () => createInitialState(['P1', 'P2', 'P3', 'P4']),
+  );
+  const [error, setError] = useState<string | null>(null);
+
+  const dispatch = useCallback(
+    (action: GameAction) => {
+      try {
+        rawDispatch(action);
+        setError(null);
+      } catch (e) {
+        if (e instanceof GameError) {
+          setError(e.message);
+        } else {
+          throw e;
+        }
+      }
+    },
+    [],
+  );
+
+  const handleStart = useCallback(
+    (names: string[], playerCount: number) => {
+      const seed = Date.now();
+      const newState = createInitialState(names.slice(0, playerCount), seed);
+      rawDispatch({ type: '__RESET__', state: newState });
+      setError(null);
+      setGameStarted(true);
+      // Auto-start the game
+      setTimeout(() => {
+        try {
+          rawDispatch({ type: 'START_GAME' } as GameAction);
+        } catch {
+          // ignore if already started
+        }
+      }, 0);
+    },
+    [],
+  );
+
+  const handleNewGame = useCallback(() => {
+    setGameStarted(false);
+    setError(null);
+  }, []);
+
+  if (!gameStarted) {
+    return <SetupScreen onStart={handleStart} />;
+  }
+
+  return (
+    <Game
+      state={state}
+      dispatch={dispatch}
+      error={error}
+      onNewGame={handleNewGame}
+    />
+  );
+}
+
+export default App;
