@@ -5,11 +5,12 @@ import { useIsMobile } from '../../hooks/useIsMobile';
 
 interface SetupScreenProps {
   onStart: (names: string[], playerCount: number, playerConfigs: PlayerConfig[]) => void;
+  onCreateOnline?: (playerCount: number, configs: PlayerConfig[], names: string[]) => void;
 }
 
 const DEFAULT_CONFIG: PlayerConfig = { isAI: false, difficulty: 'medium', strategyType: 'heuristic' };
 
-export function SetupScreen({ onStart }: SetupScreenProps) {
+export function SetupScreen({ onStart, onCreateOnline }: SetupScreenProps) {
   const isMobile = useIsMobile();
   const [playerCount, setPlayerCount] = useState(4);
   const [names, setNames] = useState(['', '', '', '']);
@@ -187,8 +188,22 @@ export function SetupScreen({ onStart }: SetupScreenProps) {
             fontWeight: 'bold', marginTop: 12,
           }}
         >
-          Start Game
+          Start Local Game
         </button>
+
+        {onCreateOnline && (
+          <button
+            onClick={() => onCreateOnline(playerCount, configs.slice(0, playerCount), names.slice(0, playerCount))}
+            style={{
+              width: '100%', padding: '14px', fontSize: 16,
+              backgroundColor: '#2980b9', color: 'white',
+              border: 'none', borderRadius: 8, cursor: 'pointer',
+              fontWeight: 'bold', marginTop: 8,
+            }}
+          >
+            Create Online Game
+          </button>
+        )}
       </div>
     </div>
   );

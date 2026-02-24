@@ -26,18 +26,28 @@ interface GameProps {
   error: string | null;
   onNewGame: () => void;
   playerConfigs: PlayerConfig[];
+  mySeat?: number | null;
+  isOnline?: boolean;
 }
 
-export function Game({ state, dispatch, error, onNewGame, playerConfigs }: GameProps) {
+export function Game({ state, dispatch, error, onNewGame, playerConfigs, mySeat, isOnline }: GameProps) {
   const [placementMode, setPlacementMode] = useState<PlacementMode>('none');
   const [aiSpeed, setAiSpeed] = useState<AISpeed>('normal');
   const actions = useValidActions(state, placementMode);
-  const { isAIThinking } = useAITurn(state, playerConfigs, dispatch, aiSpeed);
+  // Skip AI turn hook in online mode (AI runs server-side)
+  const emptyConfigs: PlayerConfig[] = [];
+  const { isAIThinking } = useAITurn(state, isOnline ? emptyConfigs : playerConfigs, dispatch, aiSpeed);
   const isMobile = useIsMobile();
 
   const currentPlayerName = state.players[state.currentPlayer]?.name ?? '';
   const currentColor = PLAYER_COLORS[state.currentPlayer] ?? '#333';
   const isCurrentPlayerAI = playerConfigs[state.currentPlayer]?.isAI ?? false;
+
+  // In online mode, disable controls when it's not our turn
+  const isMyTurn = mySeat == null || state.currentPlayer === mySeat;
+  const isDiscardingMySeat = mySeat != null && state.phase === 'DISCARD'
+    && state.playersNeedingDiscard.includes(mySeat as any);
+  const controlsDisabled = isOnline && !isMyTurn && !isDiscardingMySeat;
 
   // Check if the acting player for discards is AI
   const discardPlayer = state.phase === 'DISCARD' && state.playersNeedingDiscard.length > 0
@@ -47,7 +57,7 @@ export function Game({ state, dispatch, error, onNewGame, playerConfigs }: GameP
 
   const handleVertexClick = useCallback(
     (vid: VertexId) => {
-      if (isAIThinking) return; // Disable clicks during AI turn
+      if (isAIThinking || controlsDisabled) return;
       if (state.phase === 'SETUP_PLACE_SETTLEMENT') {
         dispatch({
           type: 'PLACE_SETUP_SETTLEMENT',
@@ -70,12 +80,12 @@ export function Game({ state, dispatch, error, onNewGame, playerConfigs }: GameP
         setPlacementMode('none');
       }
     },
-    [state.phase, state.currentPlayer, placementMode, dispatch, isAIThinking],
+    [state.phase, state.currentPlayer, placementMode, dispatch, isAIThinking, controlsDisabled],
   );
 
   const handleEdgeClick = useCallback(
     (eid: EdgeId) => {
-      if (isAIThinking) return;
+      if (isAIThinking || controlsDisabled) return;
       if (state.phase === 'SETUP_PLACE_ROAD') {
         dispatch({
           type: 'PLACE_SETUP_ROAD',
@@ -97,12 +107,12 @@ export function Game({ state, dispatch, error, onNewGame, playerConfigs }: GameP
         setPlacementMode('none');
       }
     },
-    [state.phase, state.currentPlayer, placementMode, dispatch, isAIThinking],
+    [state.phase, state.currentPlayer, placementMode, dispatch, isAIThinking, controlsDisabled],
   );
 
   const handleHexClick = useCallback(
     (hid: HexId) => {
-      if (isAIThinking) return;
+      if (isAIThinking || controlsDisabled) return;
       if (state.phase === 'MOVE_ROBBER') {
         dispatch({
           type: 'MOVE_ROBBER',
@@ -111,7 +121,7 @@ export function Game({ state, dispatch, error, onNewGame, playerConfigs }: GameP
         });
       }
     },
-    [state.phase, state.currentPlayer, dispatch, isAIThinking],
+    [state.phase, state.currentPlayer, dispatch, isAIThinking, controlsDisabled],
   );
 
   const phaseLabel = getPhaseLabel(state);
@@ -159,9 +169,9 @@ export function Game({ state, dispatch, error, onNewGame, playerConfigs }: GameP
         <div style={{ flex: isMobile ? 'none' : 1, maxWidth: isMobile ? 'none' : 600, margin: '0 auto', width: '100%' }}>
           <BoardSVG
             state={state}
-            validVertices={isCurrentPlayerAI ? new Set() : actions.validVertices}
-            validEdges={isCurrentPlayerAI ? new Set() : actions.validEdges}
-            validHexes={isCurrentPlayerAI ? new Set() : actions.validHexes}
+            validVertices={isCurrentPlayerAI || controlsDisabled ? new Set() : actions.validVertices}
+            validEdges={isCurrentPlayerAI || controlsDisabled ? new Set() : actions.validEdges}
+            validHexes={isCurrentPlayerAI || controlsDisabled ? new Set() : actions.validHexes}
             onVertexClick={handleVertexClick}
             onEdgeClick={handleEdgeClick}
             onHexClick={handleHexClick}
@@ -196,8 +206,8 @@ export function Game({ state, dispatch, error, onNewGame, playerConfigs }: GameP
           ))}
         </div>
 
-        {/* Action buttons — hidden during AI turn */}
-        {!isCurrentPlayerAI && (
+        {/* Action buttons — hidden during AI turn or when not your turn in online mode */}
+        {!isCurrentPlayerAI && !controlsDisabled && (
           <div style={{ marginBottom: 16 }}>
             {state.phase === 'ROLL_DICE' && (
               <button
@@ -351,8 +361,8 @@ export function Game({ state, dispatch, error, onNewGame, playerConfigs }: GameP
         <GameLog log={state.log} />
       </div>
 
-      {/* Dialogs — only show for human players */}
-      {state.phase === 'DISCARD' && discardPlayer !== null && !isDiscardPlayerAI && (
+      {/* Dialogs — only show for human players (and only for your seat in online mode) */}
+      {state.phase === 'DISCARD' && discardPlayer !== null && !isDiscardPlayerAI && (mySeat == null || discardPlayer === mySeat) && (
         <DiscardDialog
           state={state}
           player={discardPlayer}
@@ -362,7 +372,7 @@ export function Game({ state, dispatch, error, onNewGame, playerConfigs }: GameP
         />
       )}
 
-      {state.phase === 'STEAL' && !isCurrentPlayerAI && (
+      {state.phase === 'STEAL' && !isCurrentPlayerAI && !controlsDisabled && (
         <StealDialog
           state={state}
           onSteal={(victim) =>
@@ -371,7 +381,7 @@ export function Game({ state, dispatch, error, onNewGame, playerConfigs }: GameP
         />
       )}
 
-      {state.phase === 'MONOPOLY_PICK' && !isCurrentPlayerAI && (
+      {state.phase === 'MONOPOLY_PICK' && !isCurrentPlayerAI && !controlsDisabled && (
         <MonopolyDialog
           onPick={(resource) =>
             dispatch({ type: 'PICK_MONOPOLY_RESOURCE', player: state.currentPlayer, resource })
@@ -379,7 +389,7 @@ export function Game({ state, dispatch, error, onNewGame, playerConfigs }: GameP
         />
       )}
 
-      {state.phase === 'YEAR_OF_PLENTY_PICK' && !isCurrentPlayerAI && (
+      {state.phase === 'YEAR_OF_PLENTY_PICK' && !isCurrentPlayerAI && !controlsDisabled && (
         <YearOfPlentyDialog
           state={state}
           onPick={(r1, r2) =>

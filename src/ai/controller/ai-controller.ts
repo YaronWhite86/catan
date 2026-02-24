@@ -15,8 +15,10 @@ let neuralModelLoading = false;
 
 /**
  * Preload the neural model weights. Call early to avoid delay on first use.
+ * Pass the model URL explicitly — callers in the browser should use
+ * `import.meta.env.BASE_URL + 'ai-models/default-model.json'`.
  */
-export async function preloadNeuralModel(url: string = `${import.meta.env.BASE_URL}ai-models/default-model.json`): Promise<void> {
+export async function preloadNeuralModel(url: string): Promise<void> {
   if (neuralModel || neuralModelLoading) return;
   neuralModelLoading = true;
   try {

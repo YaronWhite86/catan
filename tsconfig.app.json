@@ -27,7 +27,8 @@
     "paths": {
       "@engine/*": ["src/engine/*"],
       "@ui/*": ["src/ui/*"],
-      "@ai/*": ["src/ai/*"]
+      "@ai/*": ["src/ai/*"],
+      "@shared/*": ["src/shared/*"]
     }
   },
   "include": ["src"]
