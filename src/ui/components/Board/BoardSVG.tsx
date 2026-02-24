@@ -42,7 +42,7 @@ export function BoardSVG({
   return (
     <svg
       viewBox={`${vbX} ${vbY} ${vbW} ${vbH}`}
-      style={{ width: '100%', maxWidth: 600, height: 'auto', display: 'block', margin: '0 auto' }}
+      style={{ width: '100%', height: 'auto', display: 'block', margin: '0 auto' }}
     >
       {/* Ocean background */}
       <rect x={vbX} y={vbY} width={vbW} height={vbH} fill="#2980b9" rx={8} />

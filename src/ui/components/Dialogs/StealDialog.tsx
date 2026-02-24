@@ -2,6 +2,7 @@ import type { PlayerId } from '@engine/types';
 import type { GameState } from '@engine/types';
 import { getStealTargets } from '@engine/rules/robber';
 import { PLAYER_COLORS } from '@engine/constants';
+import { useIsMobile } from '../../hooks/useIsMobile';
 
 interface StealDialogProps {
   state: GameState;
@@ -9,6 +10,7 @@ interface StealDialogProps {
 }
 
 export function StealDialog({ state, onSteal }: StealDialogProps) {
+  const isMobile = useIsMobile();
   const targets = getStealTargets(state, state.robberHex, state.currentPlayer);
 
   if (targets.length === 0) {
@@ -41,7 +43,11 @@ export function StealDialog({ state, onSteal }: StealDialogProps) {
       backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex',
       alignItems: 'center', justifyContent: 'center', zIndex: 100,
     }}>
-      <div style={{ background: 'white', borderRadius: 12, padding: 24, minWidth: 250 }}>
+      <div style={{
+        background: 'white', borderRadius: 12, padding: isMobile ? 16 : 24,
+        width: isMobile ? 'calc(100vw - 32px)' : undefined,
+        maxWidth: 350, minWidth: isMobile ? undefined : 250,
+      }}>
         <h3 style={{ margin: '0 0 12px' }}>Steal from whom?</h3>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {targets.map((pid) => (

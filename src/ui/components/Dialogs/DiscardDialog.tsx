@@ -4,6 +4,7 @@ import { ALL_RESOURCES } from '@engine/types';
 import { RESOURCE_LABELS } from '@engine/constants';
 import { getDiscardCount } from '@engine/rules/dice';
 import type { GameState } from '@engine/types';
+import { useIsMobile } from '../../hooks/useIsMobile';
 
 interface DiscardDialogProps {
   state: GameState;
@@ -12,6 +13,7 @@ interface DiscardDialogProps {
 }
 
 export function DiscardDialog({ state, player, onDiscard }: DiscardDialogProps) {
+  const isMobile = useIsMobile();
   const required = getDiscardCount(state, player);
   const [discard, setDiscard] = useState<ResourceCount>({
     lumber: 0, brick: 0, wool: 0, grain: 0, ore: 0,
@@ -32,8 +34,10 @@ export function DiscardDialog({ state, player, onDiscard }: DiscardDialogProps) 
       alignItems: 'center', justifyContent: 'center', zIndex: 100,
     }}>
       <div style={{
-        background: 'white', borderRadius: 12, padding: 24,
-        minWidth: 300, boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
+        background: 'white', borderRadius: 12, padding: isMobile ? 16 : 24,
+        width: isMobile ? 'calc(100vw - 32px)' : undefined,
+        maxWidth: 400, minWidth: isMobile ? undefined : 300,
+        boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
       }}>
         <h3 style={{ margin: '0 0 12px' }}>
           {state.players[player].name}: Discard {required} cards
@@ -48,11 +52,11 @@ export function DiscardDialog({ state, player, onDiscard }: DiscardDialogProps) 
               ({state.players[player].resources[r]})
             </span>
             <button onClick={() => adjust(r, -1)} disabled={discard[r] <= 0}
-              style={{ width: 28, height: 28 }}>-</button>
+              style={{ width: isMobile ? 40 : 28, height: isMobile ? 40 : 28 }}>-</button>
             <span style={{ width: 20, textAlign: 'center' }}>{discard[r]}</span>
             <button onClick={() => adjust(r, 1)}
               disabled={discard[r] >= state.players[player].resources[r] || total >= required}
-              style={{ width: 28, height: 28 }}>+</button>
+              style={{ width: isMobile ? 40 : 28, height: isMobile ? 40 : 28 }}>+</button>
           </div>
         ))}
         <button

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { PLAYER_COLORS } from '@engine/constants';
 import type { PlayerConfig, AIDifficulty, StrategyType } from '@ai/types';
+import { useIsMobile } from '../../hooks/useIsMobile';
 
 interface SetupScreenProps {
   onStart: (names: string[], playerCount: number, playerConfigs: PlayerConfig[]) => void;
@@ -9,6 +10,7 @@ interface SetupScreenProps {
 const DEFAULT_CONFIG: PlayerConfig = { isAI: false, difficulty: 'medium', strategyType: 'heuristic' };
 
 export function SetupScreen({ onStart }: SetupScreenProps) {
+  const isMobile = useIsMobile();
   const [playerCount, setPlayerCount] = useState(4);
   const [names, setNames] = useState(['', '', '', '']);
   const [configs, setConfigs] = useState<PlayerConfig[]>([
@@ -59,11 +61,11 @@ export function SetupScreen({ onStart }: SetupScreenProps) {
   return (
     <div style={{
       display: 'flex', flexDirection: 'column', alignItems: 'center',
-      justifyContent: 'center', minHeight: '100vh', padding: 20,
+      justifyContent: 'center', minHeight: '100vh', padding: isMobile ? 12 : 20,
       background: 'linear-gradient(135deg, #1a5276 0%, #2980b9 100%)',
     }}>
       <div style={{
-        background: 'white', borderRadius: 16, padding: 32,
+        background: 'white', borderRadius: 16, padding: isMobile ? 16 : 32,
         boxShadow: '0 8px 40px rgba(0,0,0,0.2)', maxWidth: 440, width: '100%',
       }}>
         <h1 style={{ textAlign: 'center', margin: '0 0 8px', color: '#2c3e50' }}>
@@ -107,7 +109,7 @@ export function SetupScreen({ onStart }: SetupScreenProps) {
               <button
                 onClick={() => handleToggleAI(i)}
                 style={{
-                  padding: '3px 10px', fontSize: 11, fontWeight: 'bold',
+                  padding: isMobile ? '8px 12px' : '3px 10px', fontSize: 11, fontWeight: 'bold',
                   backgroundColor: configs[i].isAI ? '#8e44ad' : '#ecf0f1',
                   color: configs[i].isAI ? 'white' : '#666',
                   border: 'none', borderRadius: 4, cursor: 'pointer',
@@ -126,7 +128,7 @@ export function SetupScreen({ onStart }: SetupScreenProps) {
                       key={s}
                       onClick={() => handleStrategyChange(i, s)}
                       style={{
-                        flex: 1, padding: '5px 4px', fontSize: 10,
+                        flex: 1, padding: isMobile ? '10px 8px' : '5px 4px', fontSize: 10,
                         backgroundColor: configs[i].strategyType === s ? '#2980b9' : '#f5f5f5',
                         color: configs[i].strategyType === s ? 'white' : '#666',
                         border: configs[i].strategyType === s ? 'none' : '1px solid #ddd',
@@ -146,7 +148,7 @@ export function SetupScreen({ onStart }: SetupScreenProps) {
                         key={d}
                         onClick={() => handleDifficultyChange(i, d)}
                         style={{
-                          flex: 1, padding: '6px 4px', fontSize: 11,
+                          flex: 1, padding: isMobile ? '10px 8px' : '6px 4px', fontSize: 11,
                           backgroundColor: configs[i].difficulty === d ? '#8e44ad' : '#f5f5f5',
                           color: configs[i].difficulty === d ? 'white' : '#666',
                           border: configs[i].difficulty === d ? 'none' : '1px solid #ddd',

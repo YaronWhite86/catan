@@ -16,6 +16,7 @@ import { WinnerDialog } from './Dialogs/WinnerDialog';
 import { AIThinkingIndicator } from './AIThinkingIndicator';
 import { useValidActions } from '../hooks/useValidActions';
 import { useAITurn } from '../hooks/useAITurn';
+import { useIsMobile } from '../hooks/useIsMobile';
 import type { PlacementMode } from '../hooks/useValidActions';
 import type { AISpeed } from '../hooks/useAITurn';
 
@@ -32,6 +33,7 @@ export function Game({ state, dispatch, error, onNewGame, playerConfigs }: GameP
   const [aiSpeed, setAiSpeed] = useState<AISpeed>('normal');
   const actions = useValidActions(state, placementMode);
   const { isAIThinking } = useAITurn(state, playerConfigs, dispatch, aiSpeed);
+  const isMobile = useIsMobile();
 
   const currentPlayerName = state.players[state.currentPlayer]?.name ?? '';
   const currentColor = PLAYER_COLORS[state.currentPlayer] ?? '#333';
@@ -115,9 +117,9 @@ export function Game({ state, dispatch, error, onNewGame, playerConfigs }: GameP
   const phaseLabel = getPhaseLabel(state);
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', fontFamily: 'system-ui, sans-serif' }}>
+    <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', minHeight: '100vh', fontFamily: 'system-ui, sans-serif' }}>
       {/* Left side: Board */}
-      <div style={{ flex: 1, padding: 16, display: 'flex', flexDirection: 'column' }}>
+      <div style={{ flex: isMobile ? 'none' : 1, padding: isMobile ? 8 : 16, display: 'flex', flexDirection: 'column' }}>
         <div style={{
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
           marginBottom: 8, padding: '8px 12px', borderRadius: 8,
@@ -134,7 +136,7 @@ export function Game({ state, dispatch, error, onNewGame, playerConfigs }: GameP
             )}
             <span style={{ marginLeft: 8, color: '#666', fontSize: 14 }}>{phaseLabel}</span>
           </div>
-          <DiceDisplay dice={state.lastRoll} />
+          <DiceDisplay dice={state.lastRoll} compact={isMobile} />
         </div>
 
         {isAIThinking && (
@@ -154,7 +156,7 @@ export function Game({ state, dispatch, error, onNewGame, playerConfigs }: GameP
           </div>
         )}
 
-        <div style={{ flex: 1 }}>
+        <div style={{ flex: isMobile ? 'none' : 1, maxWidth: isMobile ? 'none' : 600, margin: '0 auto', width: '100%' }}>
           <BoardSVG
             state={state}
             validVertices={isCurrentPlayerAI ? new Set() : actions.validVertices}
@@ -169,8 +171,10 @@ export function Game({ state, dispatch, error, onNewGame, playerConfigs }: GameP
 
       {/* Right side: Controls */}
       <div style={{
-        width: 320, padding: 16, backgroundColor: '#f8f9fa',
-        borderLeft: '1px solid #ddd', overflowY: 'auto',
+        width: isMobile ? 'auto' : 320, padding: isMobile ? 12 : 16, backgroundColor: '#f8f9fa',
+        borderLeft: isMobile ? 'none' : '1px solid #ddd',
+        borderTop: isMobile ? '1px solid #ddd' : 'none',
+        overflowY: isMobile ? 'visible' : 'auto',
       }}>
         {/* AI Speed Control */}
         <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -180,7 +184,7 @@ export function Game({ state, dispatch, error, onNewGame, playerConfigs }: GameP
               key={s}
               onClick={() => setAiSpeed(s)}
               style={{
-                padding: '2px 8px', fontSize: 10,
+                padding: isMobile ? '6px 10px' : '2px 8px', fontSize: 10,
                 backgroundColor: aiSpeed === s ? '#8e44ad' : '#f0f0f0',
                 color: aiSpeed === s ? 'white' : '#666',
                 border: 'none', borderRadius: 3, cursor: 'pointer',
@@ -218,6 +222,7 @@ export function Game({ state, dispatch, error, onNewGame, playerConfigs }: GameP
                     enabled={actions.canBuildRoad}
                     active={placementMode === 'road'}
                     onClick={() => setPlacementMode(placementMode === 'road' ? 'none' : 'road')}
+                    isMobile={isMobile}
                   />
                   <BuildButton
                     label="Settlement"
@@ -225,6 +230,7 @@ export function Game({ state, dispatch, error, onNewGame, playerConfigs }: GameP
                     enabled={actions.canBuildSettlement}
                     active={placementMode === 'settlement'}
                     onClick={() => setPlacementMode(placementMode === 'settlement' ? 'none' : 'settlement')}
+                    isMobile={isMobile}
                   />
                 </div>
                 <div style={{ display: 'flex', gap: 6 }}>
@@ -234,6 +240,7 @@ export function Game({ state, dispatch, error, onNewGame, playerConfigs }: GameP
                     enabled={actions.canBuildCity}
                     active={placementMode === 'city'}
                     onClick={() => setPlacementMode(placementMode === 'city' ? 'none' : 'city')}
+                    isMobile={isMobile}
                   />
                   <BuildButton
                     label="Dev Card"
@@ -241,22 +248,23 @@ export function Game({ state, dispatch, error, onNewGame, playerConfigs }: GameP
                     enabled={actions.canBuyCard}
                     active={false}
                     onClick={() => dispatch({ type: 'BUY_DEV_CARD', player: state.currentPlayer })}
+                    isMobile={isMobile}
                   />
                 </div>
 
                 {/* Dev card actions */}
                 <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
                   {actions.canPlayKnight && (
-                    <SmallButton label="Knight" onClick={() => dispatch({ type: 'PLAY_KNIGHT', player: state.currentPlayer })} />
+                    <SmallButton label="Knight" onClick={() => dispatch({ type: 'PLAY_KNIGHT', player: state.currentPlayer })} isMobile={isMobile} />
                   )}
                   {actions.canPlayRoadBuilding && (
-                    <SmallButton label="Road Building" onClick={() => dispatch({ type: 'PLAY_ROAD_BUILDING', player: state.currentPlayer })} />
+                    <SmallButton label="Road Building" onClick={() => dispatch({ type: 'PLAY_ROAD_BUILDING', player: state.currentPlayer })} isMobile={isMobile} />
                   )}
                   {actions.canPlayYearOfPlenty && (
-                    <SmallButton label="Year of Plenty" onClick={() => dispatch({ type: 'PLAY_YEAR_OF_PLENTY', player: state.currentPlayer })} />
+                    <SmallButton label="Year of Plenty" onClick={() => dispatch({ type: 'PLAY_YEAR_OF_PLENTY', player: state.currentPlayer })} isMobile={isMobile} />
                   )}
                   {actions.canPlayMonopoly && (
-                    <SmallButton label="Monopoly" onClick={() => dispatch({ type: 'PLAY_MONOPOLY', player: state.currentPlayer })} />
+                    <SmallButton label="Monopoly" onClick={() => dispatch({ type: 'PLAY_MONOPOLY', player: state.currentPlayer })} isMobile={isMobile} />
                   )}
                 </div>
 
@@ -282,7 +290,7 @@ export function Game({ state, dispatch, error, onNewGame, playerConfigs }: GameP
                     dispatch({ type: 'END_TURN', player: state.currentPlayer });
                   }}
                   style={{
-                    width: '100%', padding: '10px', fontSize: 14,
+                    width: '100%', padding: isMobile ? '14px' : '10px', fontSize: 14,
                     backgroundColor: '#3498db', color: 'white',
                     border: 'none', borderRadius: 6, cursor: 'pointer',
                     fontWeight: 'bold', marginTop: 4,
@@ -393,19 +401,21 @@ function BuildButton({
   enabled,
   active,
   onClick,
+  isMobile,
 }: {
   label: string;
   cost: string;
   enabled: boolean;
   active: boolean;
   onClick: () => void;
+  isMobile?: boolean;
 }) {
   return (
     <button
       onClick={onClick}
       disabled={!enabled}
       style={{
-        flex: 1, padding: '8px 4px', fontSize: 12,
+        flex: 1, padding: isMobile ? '12px 8px' : '8px 4px', fontSize: 12,
         backgroundColor: active ? '#27ae60' : enabled ? '#ecf0f1' : '#f5f5f5',
         color: active ? 'white' : enabled ? '#2c3e50' : '#bbb',
         border: active ? '2px solid #27ae60' : '1px solid #ddd',
@@ -419,12 +429,12 @@ function BuildButton({
   );
 }
 
-function SmallButton({ label, onClick }: { label: string; onClick: () => void }) {
+function SmallButton({ label, onClick, isMobile }: { label: string; onClick: () => void; isMobile?: boolean }) {
   return (
     <button
       onClick={onClick}
       style={{
-        padding: '4px 10px', fontSize: 11,
+        padding: isMobile ? '10px 14px' : '4px 10px', fontSize: isMobile ? 13 : 11,
         backgroundColor: '#8e44ad', color: 'white',
         border: 'none', borderRadius: 4, cursor: 'pointer',
       }}

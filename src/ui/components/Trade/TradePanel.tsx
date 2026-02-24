@@ -4,6 +4,7 @@ import { ALL_RESOURCES } from '@engine/types';
 import { RESOURCE_LABELS } from '@engine/constants';
 import { getPlayerTradeRatio } from '@engine/rules/trading';
 import { emptyResources } from '@engine/utils/resource-utils';
+import { useIsMobile } from '../../hooks/useIsMobile';
 
 interface TradePanelProps {
   state: GameState;
@@ -20,6 +21,7 @@ export function TradePanel({
   onAcceptTrade,
   onRejectTrade,
 }: TradePanelProps) {
+  const isMobile = useIsMobile();
   const [tradeMode, setTradeMode] = useState<'maritime' | 'domestic' | null>(null);
 
   return (
@@ -37,7 +39,7 @@ export function TradePanel({
             <div>Offering: {formatResources(state.pendingTrade.offering)}</div>
             <div>Requesting: {formatResources(state.pendingTrade.requesting)}</div>
           </div>
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             {state.players.map((p) => {
               if (p.id === state.pendingTrade!.from) return null;
               return (
@@ -45,7 +47,7 @@ export function TradePanel({
                   key={p.id}
                   onClick={() => onAcceptTrade(p.id)}
                   style={{
-                    padding: '6px 12px', fontSize: 12,
+                    padding: isMobile ? '10px 14px' : '6px 12px', fontSize: 12,
                     backgroundColor: '#27ae60', color: 'white',
                     border: 'none', borderRadius: 4, cursor: 'pointer',
                   }}
@@ -57,7 +59,7 @@ export function TradePanel({
             <button
               onClick={() => onRejectTrade(state.currentPlayer)}
               style={{
-                padding: '6px 12px', fontSize: 12,
+                padding: isMobile ? '10px 14px' : '6px 12px', fontSize: 12,
                 backgroundColor: '#e74c3c', color: 'white',
                 border: 'none', borderRadius: 4, cursor: 'pointer',
               }}
@@ -113,6 +115,7 @@ function MaritimeTradeUI({
   state: GameState;
   onTrade: (give: ResourceType, receive: ResourceType) => void;
 }) {
+  const isMobile = useIsMobile();
   const [give, setGive] = useState<ResourceType | null>(null);
   const [receive, setReceive] = useState<ResourceType | null>(null);
   const player = state.currentPlayer;
@@ -131,7 +134,7 @@ function MaritimeTradeUI({
                 onClick={() => setGive(r)}
                 disabled={!canGive}
                 style={{
-                  padding: '4px 8px', fontSize: 11,
+                  padding: isMobile ? '8px 10px' : '4px 8px', fontSize: isMobile ? 12 : 11,
                   backgroundColor: give === r ? '#e74c3c' : canGive ? '#ecf0f1' : '#f5f5f5',
                   color: give === r ? 'white' : canGive ? '#2c3e50' : '#bbb',
                   border: 'none', borderRadius: 3, cursor: canGive ? 'pointer' : 'default',
@@ -152,7 +155,7 @@ function MaritimeTradeUI({
               onClick={() => setReceive(r)}
               disabled={state.bank[r] <= 0}
               style={{
-                padding: '4px 8px', fontSize: 11,
+                padding: isMobile ? '8px 10px' : '4px 8px', fontSize: isMobile ? 12 : 11,
                 backgroundColor: receive === r ? '#27ae60' : '#ecf0f1',
                 color: receive === r ? 'white' : '#2c3e50',
                 border: 'none', borderRadius: 3, cursor: 'pointer',
@@ -185,6 +188,7 @@ function DomesticTradeUI({
   state: GameState;
   onPropose: (offering: ResourceCount, requesting: ResourceCount) => void;
 }) {
+  const isMobile = useIsMobile();
   const [offering, setOffering] = useState<ResourceCount>(emptyResources());
   const [requesting, setRequesting] = useState<ResourceCount>(emptyResources());
   const player = state.currentPlayer;
@@ -206,15 +210,15 @@ function DomesticTradeUI({
 
   return (
     <div style={{ padding: 8, border: '1px solid #ddd', borderRadius: 6, fontSize: 13 }}>
-      <div style={{ display: 'flex', gap: 16 }}>
+      <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? 8 : 16 }}>
         <div>
           <div style={{ fontWeight: 'bold', marginBottom: 4 }}>Offer:</div>
           {ALL_RESOURCES.map((r) => (
             <div key={r} style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 2 }}>
               <span style={{ width: 50, fontSize: 11 }}>{RESOURCE_LABELS[r]}</span>
-              <button onClick={() => adjustOffer(r, -1)} style={{ width: 22, height: 22, fontSize: 10 }}>-</button>
+              <button onClick={() => adjustOffer(r, -1)} style={{ width: isMobile ? 36 : 22, height: isMobile ? 36 : 22, fontSize: 10 }}>-</button>
               <span style={{ width: 16, textAlign: 'center', fontSize: 12 }}>{offering[r]}</span>
-              <button onClick={() => adjustOffer(r, 1)} style={{ width: 22, height: 22, fontSize: 10 }}>+</button>
+              <button onClick={() => adjustOffer(r, 1)} style={{ width: isMobile ? 36 : 22, height: isMobile ? 36 : 22, fontSize: 10 }}>+</button>
             </div>
           ))}
         </div>
@@ -223,9 +227,9 @@ function DomesticTradeUI({
           {ALL_RESOURCES.map((r) => (
             <div key={r} style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 2 }}>
               <span style={{ width: 50, fontSize: 11 }}>{RESOURCE_LABELS[r]}</span>
-              <button onClick={() => adjustRequest(r, -1)} style={{ width: 22, height: 22, fontSize: 10 }}>-</button>
+              <button onClick={() => adjustRequest(r, -1)} style={{ width: isMobile ? 36 : 22, height: isMobile ? 36 : 22, fontSize: 10 }}>-</button>
               <span style={{ width: 16, textAlign: 'center', fontSize: 12 }}>{requesting[r]}</span>
-              <button onClick={() => adjustRequest(r, 1)} style={{ width: 22, height: 22, fontSize: 10 }}>+</button>
+              <button onClick={() => adjustRequest(r, 1)} style={{ width: isMobile ? 36 : 22, height: isMobile ? 36 : 22, fontSize: 10 }}>+</button>
             </div>
           ))}
         </div>
