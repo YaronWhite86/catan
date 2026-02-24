@@ -3,6 +3,7 @@ import type { GameState } from './engine/types';
 import type { GameAction } from './engine/actions';
 import { gameReducer, GameError } from './engine/reducer';
 import { createInitialState } from './engine/state';
+import type { PlayerConfig } from './ai/types';
 import { SetupScreen } from './ui/components/Setup/SetupScreen';
 import { Game } from './ui/components/Game';
 
@@ -17,6 +18,7 @@ function internalReducer(state: GameState, action: InternalAction): GameState {
 
 function App() {
   const [gameStarted, setGameStarted] = useState(false);
+  const [playerConfigs, setPlayerConfigs] = useState<PlayerConfig[]>([]);
   const [state, rawDispatch] = useReducer(
     internalReducer,
     null as unknown as GameState,
@@ -41,10 +43,11 @@ function App() {
   );
 
   const handleStart = useCallback(
-    (names: string[], playerCount: number) => {
+    (names: string[], playerCount: number, configs: PlayerConfig[]) => {
       const seed = Date.now();
       const newState = createInitialState(names.slice(0, playerCount), seed);
       rawDispatch({ type: '__RESET__', state: newState });
+      setPlayerConfigs(configs);
       setError(null);
       setGameStarted(true);
       // Auto-start the game
@@ -61,6 +64,7 @@ function App() {
 
   const handleNewGame = useCallback(() => {
     setGameStarted(false);
+    setPlayerConfigs([]);
     setError(null);
   }, []);
 
@@ -74,6 +78,7 @@ function App() {
       dispatch={dispatch}
       error={error}
       onNewGame={handleNewGame}
+      playerConfigs={playerConfigs}
     />
   );
 }

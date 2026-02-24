@@ -1,13 +1,22 @@
 import { useState } from 'react';
 import { PLAYER_COLORS } from '@engine/constants';
+import type { PlayerConfig, AIDifficulty, StrategyType } from '@ai/types';
 
 interface SetupScreenProps {
-  onStart: (names: string[], playerCount: number) => void;
+  onStart: (names: string[], playerCount: number, playerConfigs: PlayerConfig[]) => void;
 }
+
+const DEFAULT_CONFIG: PlayerConfig = { isAI: false, difficulty: 'medium', strategyType: 'heuristic' };
 
 export function SetupScreen({ onStart }: SetupScreenProps) {
   const [playerCount, setPlayerCount] = useState(4);
   const [names, setNames] = useState(['', '', '', '']);
+  const [configs, setConfigs] = useState<PlayerConfig[]>([
+    { ...DEFAULT_CONFIG },
+    { ...DEFAULT_CONFIG, isAI: true },
+    { ...DEFAULT_CONFIG, isAI: true },
+    { ...DEFAULT_CONFIG, isAI: true },
+  ]);
 
   const handleNameChange = (idx: number, name: string) => {
     const newNames = [...names];
@@ -15,11 +24,36 @@ export function SetupScreen({ onStart }: SetupScreenProps) {
     setNames(newNames);
   };
 
+  const handleToggleAI = (idx: number) => {
+    const newConfigs = [...configs];
+    newConfigs[idx] = { ...newConfigs[idx], isAI: !newConfigs[idx].isAI };
+    setConfigs(newConfigs);
+  };
+
+  const handleDifficultyChange = (idx: number, difficulty: AIDifficulty) => {
+    const newConfigs = [...configs];
+    newConfigs[idx] = { ...newConfigs[idx], difficulty };
+    setConfigs(newConfigs);
+  };
+
+  const handleStrategyChange = (idx: number, strategyType: StrategyType) => {
+    const newConfigs = [...configs];
+    newConfigs[idx] = { ...newConfigs[idx], strategyType };
+    setConfigs(newConfigs);
+  };
+
   const handleStart = () => {
     const finalNames = names
       .slice(0, playerCount)
-      .map((n, i) => n.trim() || `Player ${i + 1}`);
-    onStart(finalNames, playerCount);
+      .map((n, i) => {
+        if (configs[i].isAI) {
+          const diffLabel = configs[i].difficulty.charAt(0).toUpperCase() + configs[i].difficulty.slice(1);
+          const stratLabel = configs[i].strategyType === 'neural' ? 'Neural' : '';
+          return n.trim() || `AI ${stratLabel}${diffLabel} ${i + 1}`.replace(/\s+/g, ' ').trim();
+        }
+        return n.trim() || `Player ${i + 1}`;
+      });
+    onStart(finalNames, playerCount, configs.slice(0, playerCount));
   };
 
   return (
@@ -30,13 +64,13 @@ export function SetupScreen({ onStart }: SetupScreenProps) {
     }}>
       <div style={{
         background: 'white', borderRadius: 16, padding: 32,
-        boxShadow: '0 8px 40px rgba(0,0,0,0.2)', maxWidth: 400, width: '100%',
+        boxShadow: '0 8px 40px rgba(0,0,0,0.2)', maxWidth: 440, width: '100%',
       }}>
         <h1 style={{ textAlign: 'center', margin: '0 0 8px', color: '#2c3e50' }}>
           Settlers of Catan
         </h1>
         <p style={{ textAlign: 'center', color: '#7f8c8d', marginBottom: 24 }}>
-          Local hot-seat multiplayer
+          Play against AI or friends
         </p>
 
         <div style={{ marginBottom: 20 }}>
@@ -63,24 +97,82 @@ export function SetupScreen({ onStart }: SetupScreenProps) {
         </div>
 
         {Array.from({ length: playerCount }, (_, i) => (
-          <div key={i} style={{ marginBottom: 12 }}>
-            <label style={{
-              display: 'block', marginBottom: 4, fontSize: 13,
-              color: PLAYER_COLORS[i], fontWeight: 'bold',
-            }}>
-              Player {i + 1}:
-            </label>
-            <input
-              type="text"
-              value={names[i]}
-              onChange={(e) => handleNameChange(i, e.target.value)}
-              placeholder={`Player ${i + 1}`}
-              style={{
-                width: '100%', padding: '8px 12px', fontSize: 14,
-                border: `2px solid ${PLAYER_COLORS[i]}40`,
-                borderRadius: 6, outline: 'none', boxSizing: 'border-box',
-              }}
-            />
+          <div key={i} style={{ marginBottom: 14 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+              <label style={{
+                fontSize: 13, color: PLAYER_COLORS[i], fontWeight: 'bold', flex: 1,
+              }}>
+                Player {i + 1}:
+              </label>
+              <button
+                onClick={() => handleToggleAI(i)}
+                style={{
+                  padding: '3px 10px', fontSize: 11, fontWeight: 'bold',
+                  backgroundColor: configs[i].isAI ? '#8e44ad' : '#ecf0f1',
+                  color: configs[i].isAI ? 'white' : '#666',
+                  border: 'none', borderRadius: 4, cursor: 'pointer',
+                }}
+              >
+                {configs[i].isAI ? 'AI' : 'Human'}
+              </button>
+            </div>
+
+            {configs[i].isAI ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                {/* Strategy type */}
+                <div style={{ display: 'flex', gap: 4 }}>
+                  {(['heuristic', 'neural'] as StrategyType[]).map((s) => (
+                    <button
+                      key={s}
+                      onClick={() => handleStrategyChange(i, s)}
+                      style={{
+                        flex: 1, padding: '5px 4px', fontSize: 10,
+                        backgroundColor: configs[i].strategyType === s ? '#2980b9' : '#f5f5f5',
+                        color: configs[i].strategyType === s ? 'white' : '#666',
+                        border: configs[i].strategyType === s ? 'none' : '1px solid #ddd',
+                        borderRadius: 4, cursor: 'pointer',
+                        textTransform: 'capitalize',
+                      }}
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+                {/* Difficulty (only for heuristic) */}
+                {configs[i].strategyType === 'heuristic' && (
+                  <div style={{ display: 'flex', gap: 4 }}>
+                    {(['easy', 'medium', 'hard'] as AIDifficulty[]).map((d) => (
+                      <button
+                        key={d}
+                        onClick={() => handleDifficultyChange(i, d)}
+                        style={{
+                          flex: 1, padding: '6px 4px', fontSize: 11,
+                          backgroundColor: configs[i].difficulty === d ? '#8e44ad' : '#f5f5f5',
+                          color: configs[i].difficulty === d ? 'white' : '#666',
+                          border: configs[i].difficulty === d ? 'none' : '1px solid #ddd',
+                          borderRadius: 4, cursor: 'pointer',
+                          textTransform: 'capitalize',
+                        }}
+                      >
+                        {d}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <input
+                type="text"
+                value={names[i]}
+                onChange={(e) => handleNameChange(i, e.target.value)}
+                placeholder={`Player ${i + 1}`}
+                style={{
+                  width: '100%', padding: '8px 12px', fontSize: 14,
+                  border: `2px solid ${PLAYER_COLORS[i]}40`,
+                  borderRadius: 6, outline: 'none', boxSizing: 'border-box',
+                }}
+              />
+            )}
           </div>
         ))}
 

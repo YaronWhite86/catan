@@ -9,7 +9,11 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest",
-    "test:run": "vitest run"
+    "test:run": "vitest run",
+    "train:install": "pip install -r training/requirements.txt",
+    "train:run": "python training/trainer.py",
+    "train:export": "python training/export_weights.py",
+    "train:evaluate": "python training/evaluate.py"
   },
   "dependencies": {
     "react": "^19.2.0",

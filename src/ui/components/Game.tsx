@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import type { GameState, VertexId, EdgeId, HexId } from '@engine/types';
 import type { GameAction } from '@engine/actions';
 import { PLAYER_COLORS } from '@engine/constants';
+import type { PlayerConfig } from '@ai/types';
 import { BoardSVG } from './Board/BoardSVG';
 import { PlayerPanel } from './PlayerPanel/PlayerPanel';
 import { GameLog } from './Status/GameLog';
@@ -12,25 +13,39 @@ import { StealDialog } from './Dialogs/StealDialog';
 import { MonopolyDialog } from './Dialogs/MonopolyDialog';
 import { YearOfPlentyDialog } from './Dialogs/YearOfPlentyDialog';
 import { WinnerDialog } from './Dialogs/WinnerDialog';
+import { AIThinkingIndicator } from './AIThinkingIndicator';
 import { useValidActions } from '../hooks/useValidActions';
+import { useAITurn } from '../hooks/useAITurn';
 import type { PlacementMode } from '../hooks/useValidActions';
+import type { AISpeed } from '../hooks/useAITurn';
 
 interface GameProps {
   state: GameState;
   dispatch: (action: GameAction) => void;
   error: string | null;
   onNewGame: () => void;
+  playerConfigs: PlayerConfig[];
 }
 
-export function Game({ state, dispatch, error, onNewGame }: GameProps) {
+export function Game({ state, dispatch, error, onNewGame, playerConfigs }: GameProps) {
   const [placementMode, setPlacementMode] = useState<PlacementMode>('none');
+  const [aiSpeed, setAiSpeed] = useState<AISpeed>('normal');
   const actions = useValidActions(state, placementMode);
+  const { isAIThinking } = useAITurn(state, playerConfigs, dispatch, aiSpeed);
 
   const currentPlayerName = state.players[state.currentPlayer]?.name ?? '';
   const currentColor = PLAYER_COLORS[state.currentPlayer] ?? '#333';
+  const isCurrentPlayerAI = playerConfigs[state.currentPlayer]?.isAI ?? false;
+
+  // Check if the acting player for discards is AI
+  const discardPlayer = state.phase === 'DISCARD' && state.playersNeedingDiscard.length > 0
+    ? state.playersNeedingDiscard[0]
+    : null;
+  const isDiscardPlayerAI = discardPlayer !== null && (playerConfigs[discardPlayer]?.isAI ?? false);
 
   const handleVertexClick = useCallback(
     (vid: VertexId) => {
+      if (isAIThinking) return; // Disable clicks during AI turn
       if (state.phase === 'SETUP_PLACE_SETTLEMENT') {
         dispatch({
           type: 'PLACE_SETUP_SETTLEMENT',
@@ -53,11 +68,12 @@ export function Game({ state, dispatch, error, onNewGame }: GameProps) {
         setPlacementMode('none');
       }
     },
-    [state.phase, state.currentPlayer, placementMode, dispatch],
+    [state.phase, state.currentPlayer, placementMode, dispatch, isAIThinking],
   );
 
   const handleEdgeClick = useCallback(
     (eid: EdgeId) => {
+      if (isAIThinking) return;
       if (state.phase === 'SETUP_PLACE_ROAD') {
         dispatch({
           type: 'PLACE_SETUP_ROAD',
@@ -79,11 +95,12 @@ export function Game({ state, dispatch, error, onNewGame }: GameProps) {
         setPlacementMode('none');
       }
     },
-    [state.phase, state.currentPlayer, placementMode, dispatch],
+    [state.phase, state.currentPlayer, placementMode, dispatch, isAIThinking],
   );
 
   const handleHexClick = useCallback(
     (hid: HexId) => {
+      if (isAIThinking) return;
       if (state.phase === 'MOVE_ROBBER') {
         dispatch({
           type: 'MOVE_ROBBER',
@@ -92,7 +109,7 @@ export function Game({ state, dispatch, error, onNewGame }: GameProps) {
         });
       }
     },
-    [state.phase, state.currentPlayer, dispatch],
+    [state.phase, state.currentPlayer, dispatch, isAIThinking],
   );
 
   const phaseLabel = getPhaseLabel(state);
@@ -108,10 +125,24 @@ export function Game({ state, dispatch, error, onNewGame }: GameProps) {
         }}>
           <div>
             <span style={{ fontWeight: 'bold', color: currentColor }}>{currentPlayerName}</span>
+            {isCurrentPlayerAI && (
+              <span style={{
+                marginLeft: 6, padding: '1px 6px', fontSize: 10,
+                backgroundColor: '#8e44ad', color: 'white',
+                borderRadius: 3, fontWeight: 'bold',
+              }}>AI</span>
+            )}
             <span style={{ marginLeft: 8, color: '#666', fontSize: 14 }}>{phaseLabel}</span>
           </div>
           <DiceDisplay dice={state.lastRoll} />
         </div>
+
+        {isAIThinking && (
+          <AIThinkingIndicator
+            playerName={currentPlayerName}
+            color={currentColor}
+          />
+        )}
 
         {error && (
           <div style={{
@@ -126,9 +157,9 @@ export function Game({ state, dispatch, error, onNewGame }: GameProps) {
         <div style={{ flex: 1 }}>
           <BoardSVG
             state={state}
-            validVertices={actions.validVertices}
-            validEdges={actions.validEdges}
-            validHexes={actions.validHexes}
+            validVertices={isCurrentPlayerAI ? new Set() : actions.validVertices}
+            validEdges={isCurrentPlayerAI ? new Set() : actions.validEdges}
+            validHexes={isCurrentPlayerAI ? new Set() : actions.validHexes}
             onVertexClick={handleVertexClick}
             onEdgeClick={handleEdgeClick}
             onHexClick={handleHexClick}
@@ -141,115 +172,137 @@ export function Game({ state, dispatch, error, onNewGame }: GameProps) {
         width: 320, padding: 16, backgroundColor: '#f8f9fa',
         borderLeft: '1px solid #ddd', overflowY: 'auto',
       }}>
-        {/* Action buttons */}
-        <div style={{ marginBottom: 16 }}>
-          {state.phase === 'ROLL_DICE' && (
+        {/* AI Speed Control */}
+        <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ fontSize: 11, color: '#999' }}>AI Speed:</span>
+          {(['slow', 'normal', 'fast'] as AISpeed[]).map((s) => (
             <button
-              onClick={() => dispatch({ type: 'ROLL_DICE', player: state.currentPlayer })}
+              key={s}
+              onClick={() => setAiSpeed(s)}
               style={{
-                width: '100%', padding: '14px', fontSize: 18,
-                backgroundColor: '#e67e22', color: 'white',
-                border: 'none', borderRadius: 8, cursor: 'pointer',
-                fontWeight: 'bold',
+                padding: '2px 8px', fontSize: 10,
+                backgroundColor: aiSpeed === s ? '#8e44ad' : '#f0f0f0',
+                color: aiSpeed === s ? 'white' : '#666',
+                border: 'none', borderRadius: 3, cursor: 'pointer',
+                textTransform: 'capitalize',
               }}
             >
-              Roll Dice
+              {s}
             </button>
-          )}
+          ))}
+        </div>
 
-          {state.phase === 'TRADE_BUILD_PLAY' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <div style={{ display: 'flex', gap: 6 }}>
-                <BuildButton
-                  label="Road"
-                  cost="1L 1B"
-                  enabled={actions.canBuildRoad}
-                  active={placementMode === 'road'}
-                  onClick={() => setPlacementMode(placementMode === 'road' ? 'none' : 'road')}
-                />
-                <BuildButton
-                  label="Settlement"
-                  cost="1L 1B 1W 1G"
-                  enabled={actions.canBuildSettlement}
-                  active={placementMode === 'settlement'}
-                  onClick={() => setPlacementMode(placementMode === 'settlement' ? 'none' : 'settlement')}
-                />
-              </div>
-              <div style={{ display: 'flex', gap: 6 }}>
-                <BuildButton
-                  label="City"
-                  cost="2G 3O"
-                  enabled={actions.canBuildCity}
-                  active={placementMode === 'city'}
-                  onClick={() => setPlacementMode(placementMode === 'city' ? 'none' : 'city')}
-                />
-                <BuildButton
-                  label="Dev Card"
-                  cost="1W 1G 1O"
-                  enabled={actions.canBuyCard}
-                  active={false}
-                  onClick={() => dispatch({ type: 'BUY_DEV_CARD', player: state.currentPlayer })}
-                />
-              </div>
-
-              {/* Dev card actions */}
-              <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                {actions.canPlayKnight && (
-                  <SmallButton label="Knight" onClick={() => dispatch({ type: 'PLAY_KNIGHT', player: state.currentPlayer })} />
-                )}
-                {actions.canPlayRoadBuilding && (
-                  <SmallButton label="Road Building" onClick={() => dispatch({ type: 'PLAY_ROAD_BUILDING', player: state.currentPlayer })} />
-                )}
-                {actions.canPlayYearOfPlenty && (
-                  <SmallButton label="Year of Plenty" onClick={() => dispatch({ type: 'PLAY_YEAR_OF_PLENTY', player: state.currentPlayer })} />
-                )}
-                {actions.canPlayMonopoly && (
-                  <SmallButton label="Monopoly" onClick={() => dispatch({ type: 'PLAY_MONOPOLY', player: state.currentPlayer })} />
-                )}
-              </div>
-
-              <TradePanel
-                state={state}
-                onMaritimeTrade={(give, receive) =>
-                  dispatch({ type: 'MARITIME_TRADE', player: state.currentPlayer, give, receive })
-                }
-                onProposeTrade={(offering, requesting) =>
-                  dispatch({ type: 'PROPOSE_DOMESTIC_TRADE', player: state.currentPlayer, offering, requesting })
-                }
-                onAcceptTrade={(player) =>
-                  dispatch({ type: 'ACCEPT_DOMESTIC_TRADE', player })
-                }
-                onRejectTrade={(player) =>
-                  dispatch({ type: 'REJECT_DOMESTIC_TRADE', player })
-                }
-              />
-
+        {/* Action buttons — hidden during AI turn */}
+        {!isCurrentPlayerAI && (
+          <div style={{ marginBottom: 16 }}>
+            {state.phase === 'ROLL_DICE' && (
               <button
-                onClick={() => {
-                  setPlacementMode('none');
-                  dispatch({ type: 'END_TURN', player: state.currentPlayer });
-                }}
+                onClick={() => dispatch({ type: 'ROLL_DICE', player: state.currentPlayer })}
                 style={{
-                  width: '100%', padding: '10px', fontSize: 14,
-                  backgroundColor: '#3498db', color: 'white',
-                  border: 'none', borderRadius: 6, cursor: 'pointer',
-                  fontWeight: 'bold', marginTop: 4,
+                  width: '100%', padding: '14px', fontSize: 18,
+                  backgroundColor: '#e67e22', color: 'white',
+                  border: 'none', borderRadius: 8, cursor: 'pointer',
+                  fontWeight: 'bold',
                 }}
               >
-                End Turn
+                Roll Dice
               </button>
-            </div>
-          )}
+            )}
 
-          {state.phase === 'ROAD_BUILDING_PLACE' && (
-            <div style={{
-              padding: 12, backgroundColor: '#eaf2f8', borderRadius: 8,
-              textAlign: 'center', fontSize: 14,
-            }}>
-              Place a road ({state.roadBuildingRoadsLeft} remaining)
-            </div>
-          )}
-        </div>
+            {state.phase === 'TRADE_BUILD_PLAY' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <BuildButton
+                    label="Road"
+                    cost="1L 1B"
+                    enabled={actions.canBuildRoad}
+                    active={placementMode === 'road'}
+                    onClick={() => setPlacementMode(placementMode === 'road' ? 'none' : 'road')}
+                  />
+                  <BuildButton
+                    label="Settlement"
+                    cost="1L 1B 1W 1G"
+                    enabled={actions.canBuildSettlement}
+                    active={placementMode === 'settlement'}
+                    onClick={() => setPlacementMode(placementMode === 'settlement' ? 'none' : 'settlement')}
+                  />
+                </div>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <BuildButton
+                    label="City"
+                    cost="2G 3O"
+                    enabled={actions.canBuildCity}
+                    active={placementMode === 'city'}
+                    onClick={() => setPlacementMode(placementMode === 'city' ? 'none' : 'city')}
+                  />
+                  <BuildButton
+                    label="Dev Card"
+                    cost="1W 1G 1O"
+                    enabled={actions.canBuyCard}
+                    active={false}
+                    onClick={() => dispatch({ type: 'BUY_DEV_CARD', player: state.currentPlayer })}
+                  />
+                </div>
+
+                {/* Dev card actions */}
+                <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                  {actions.canPlayKnight && (
+                    <SmallButton label="Knight" onClick={() => dispatch({ type: 'PLAY_KNIGHT', player: state.currentPlayer })} />
+                  )}
+                  {actions.canPlayRoadBuilding && (
+                    <SmallButton label="Road Building" onClick={() => dispatch({ type: 'PLAY_ROAD_BUILDING', player: state.currentPlayer })} />
+                  )}
+                  {actions.canPlayYearOfPlenty && (
+                    <SmallButton label="Year of Plenty" onClick={() => dispatch({ type: 'PLAY_YEAR_OF_PLENTY', player: state.currentPlayer })} />
+                  )}
+                  {actions.canPlayMonopoly && (
+                    <SmallButton label="Monopoly" onClick={() => dispatch({ type: 'PLAY_MONOPOLY', player: state.currentPlayer })} />
+                  )}
+                </div>
+
+                <TradePanel
+                  state={state}
+                  onMaritimeTrade={(give, receive) =>
+                    dispatch({ type: 'MARITIME_TRADE', player: state.currentPlayer, give, receive })
+                  }
+                  onProposeTrade={(offering, requesting) =>
+                    dispatch({ type: 'PROPOSE_DOMESTIC_TRADE', player: state.currentPlayer, offering, requesting })
+                  }
+                  onAcceptTrade={(player) =>
+                    dispatch({ type: 'ACCEPT_DOMESTIC_TRADE', player })
+                  }
+                  onRejectTrade={(player) =>
+                    dispatch({ type: 'REJECT_DOMESTIC_TRADE', player })
+                  }
+                />
+
+                <button
+                  onClick={() => {
+                    setPlacementMode('none');
+                    dispatch({ type: 'END_TURN', player: state.currentPlayer });
+                  }}
+                  style={{
+                    width: '100%', padding: '10px', fontSize: 14,
+                    backgroundColor: '#3498db', color: 'white',
+                    border: 'none', borderRadius: 6, cursor: 'pointer',
+                    fontWeight: 'bold', marginTop: 4,
+                  }}
+                >
+                  End Turn
+                </button>
+              </div>
+            )}
+
+            {state.phase === 'ROAD_BUILDING_PLACE' && (
+              <div style={{
+                padding: 12, backgroundColor: '#eaf2f8', borderRadius: 8,
+                textAlign: 'center', fontSize: 14,
+              }}>
+                Place a road ({state.roadBuildingRoadsLeft} remaining)
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Players */}
         <div style={{ marginBottom: 16 }}>
@@ -290,18 +343,18 @@ export function Game({ state, dispatch, error, onNewGame }: GameProps) {
         <GameLog log={state.log} />
       </div>
 
-      {/* Dialogs */}
-      {state.phase === 'DISCARD' && state.playersNeedingDiscard.length > 0 && (
+      {/* Dialogs — only show for human players */}
+      {state.phase === 'DISCARD' && discardPlayer !== null && !isDiscardPlayerAI && (
         <DiscardDialog
           state={state}
-          player={state.playersNeedingDiscard[0]}
+          player={discardPlayer}
           onDiscard={(resources) =>
-            dispatch({ type: 'DISCARD_RESOURCES', player: state.playersNeedingDiscard[0], resources })
+            dispatch({ type: 'DISCARD_RESOURCES', player: discardPlayer, resources })
           }
         />
       )}
 
-      {state.phase === 'STEAL' && (
+      {state.phase === 'STEAL' && !isCurrentPlayerAI && (
         <StealDialog
           state={state}
           onSteal={(victim) =>
@@ -310,7 +363,7 @@ export function Game({ state, dispatch, error, onNewGame }: GameProps) {
         />
       )}
 
-      {state.phase === 'MONOPOLY_PICK' && (
+      {state.phase === 'MONOPOLY_PICK' && !isCurrentPlayerAI && (
         <MonopolyDialog
           onPick={(resource) =>
             dispatch({ type: 'PICK_MONOPOLY_RESOURCE', player: state.currentPlayer, resource })
@@ -318,7 +371,7 @@ export function Game({ state, dispatch, error, onNewGame }: GameProps) {
         />
       )}
 
-      {state.phase === 'YEAR_OF_PLENTY_PICK' && (
+      {state.phase === 'YEAR_OF_PLENTY_PICK' && !isCurrentPlayerAI && (
         <YearOfPlentyDialog
           state={state}
           onPick={(r1, r2) =>
