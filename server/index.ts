@@ -21,11 +21,6 @@ if (IS_PROD) {
   app.get('/catan/*', (_req, res) => {
     res.sendFile(path.join(distPath, 'index.html'));
   });
-  // Also serve at root for cloud deployments (Render, Railway, etc.)
-  app.use(express.static(distPath));
-  app.get('/', (_req, res) => {
-    res.sendFile(path.join(distPath, 'index.html'));
-  });
 }
 
 // Health check
@@ -172,7 +167,7 @@ const HOST = process.env['HOST'] ?? '0.0.0.0';
 httpServer.listen(PORT, HOST, () => {
   console.log(`Catan server listening on ${HOST}:${PORT}`);
   if (IS_PROD) {
-    console.log(`Serving client at http://localhost:${PORT}/`);
+    console.log(`Serving client at http://localhost:${PORT}/catan/`);
   } else {
     console.log('Dev mode: client served by Vite, WS proxied from Vite');
   }

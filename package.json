@@ -19,14 +19,10 @@
     "train:export": "python training/export_weights.py",
     "train:evaluate": "python training/evaluate.py"
   },
-  "engines": {
-    "node": ">=22"
-  },
   "dependencies": {
     "express": "^5.1.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "tsx": "^4.21.0",
     "ws": "^8.18.0"
   },
   "devDependencies": {
@@ -41,6 +37,7 @@
     "@types/ws": "^8.18.0",
     "@vitejs/plugin-react": "^5.1.1",
     "concurrently": "^9.1.0",
+    "tsx": "^4.21.0",
     "eslint": "^9.39.1",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
