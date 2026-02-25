@@ -4,11 +4,12 @@
  * each dispatch updates state and re-triggers the effect.
  */
 import { useState, useEffect, useRef, useCallback } from 'react';
-import type { GameState } from '@engine/types';
+import type { GameState, PlayerId } from '@engine/types';
 import type { GameAction } from '@engine/actions';
 import type { PlayerConfig } from '@ai/types';
 import { getActingPlayer } from '@ai/action-enumerator';
 import { chooseAIAction } from '@ai/controller/ai-controller';
+import { hasResources, totalResources } from '@engine/utils/resource-utils';
 
 export type AISpeed = 'slow' | 'normal' | 'fast';
 
@@ -90,6 +91,55 @@ export function useAITurn(
     getDelay,
     state,
   ]);
+
+  // AI auto-responds to pending domestic trade offers
+  useEffect(() => {
+    if (!state.pendingTrade) return;
+
+    const trade = state.pendingTrade;
+    const proposer = trade.from;
+
+    // Find AI players who are not the proposer
+    const aiResponders: PlayerId[] = [];
+    const humanResponders: PlayerId[] = [];
+    for (let i = 0; i < state.players.length; i++) {
+      if (i === proposer) continue;
+      if (i < playerConfigs.length && playerConfigs[i]?.isAI) {
+        aiResponders.push(i as PlayerId);
+      } else {
+        humanResponders.push(i as PlayerId);
+      }
+    }
+
+    if (aiResponders.length === 0) return;
+
+    // Evaluate each AI player: can they and should they accept?
+    const requestTotal = totalResources(trade.requesting);
+    const offerTotal = totalResources(trade.offering);
+
+    let acceptor: PlayerId | null = null;
+    for (const aiId of aiResponders) {
+      const aiHand = state.players[aiId].resources;
+      // Resource check: does the AI have the requested resources?
+      if (!hasResources(aiHand, trade.requesting)) continue;
+      // Fairness check: reject if requesting more than offering + 1
+      if (requestTotal > offerTotal + 1) continue;
+      acceptor = aiId;
+      break;
+    }
+
+    const timer = setTimeout(() => {
+      if (acceptor !== null) {
+        dispatch({ type: 'ACCEPT_DOMESTIC_TRADE', player: acceptor });
+      } else if (humanResponders.length === 0) {
+        // No AI wants to accept and no humans to ask — auto-reject
+        dispatch({ type: 'REJECT_DOMESTIC_TRADE', player: proposer });
+      }
+      // Otherwise leave pending for human responders
+    }, getDelay());
+
+    return () => clearTimeout(timer);
+  }, [state.pendingTrade, state.players, playerConfigs, dispatch, getDelay]);
 
   return { isAIThinking };
 }

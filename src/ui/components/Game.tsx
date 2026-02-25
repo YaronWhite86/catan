@@ -280,6 +280,7 @@ export function Game({ state, dispatch, error, onNewGame, playerConfigs, mySeat,
 
                 <TradePanel
                   state={state}
+                  playerConfigs={playerConfigs}
                   mySeat={mySeat}
                   isOnline={isOnline}
                   onMaritimeTrade={(give, receive) =>
@@ -329,6 +330,7 @@ export function Game({ state, dispatch, error, onNewGame, playerConfigs, mySeat,
           <div style={{ marginBottom: 16 }}>
             <TradePanel
               state={state}
+              playerConfigs={playerConfigs}
               mySeat={mySeat}
               isOnline
               onMaritimeTrade={() => {}}

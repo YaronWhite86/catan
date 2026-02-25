@@ -3,11 +3,13 @@ import type { GameState, PlayerId, ResourceType, ResourceCount } from '@engine/t
 import { ALL_RESOURCES } from '@engine/types';
 import { RESOURCE_LABELS } from '@engine/constants';
 import { getPlayerTradeRatio } from '@engine/rules/trading';
-import { emptyResources } from '@engine/utils/resource-utils';
+import { emptyResources, hasResources } from '@engine/utils/resource-utils';
+import type { PlayerConfig } from '@ai/types';
 import { useIsMobile } from '../../hooks/useIsMobile';
 
 interface TradePanelProps {
   state: GameState;
+  playerConfigs?: PlayerConfig[];
   mySeat?: number | null;
   isOnline?: boolean;
   onMaritimeTrade: (give: ResourceType, receive: ResourceType) => void;
@@ -18,6 +20,7 @@ interface TradePanelProps {
 
 export function TradePanel({
   state,
+  playerConfigs,
   mySeat,
   isOnline,
   onMaritimeTrade,
@@ -89,18 +92,26 @@ export function TradePanel({
                 </>
               )
             ) : (
-              // Local hotseat mode — accept buttons for all players
+              // Local hotseat mode — accept buttons for human players only
               <>
                 {state.players.map((p) => {
                   if (p.id === state.pendingTrade!.from) return null;
+                  // Skip AI players — they auto-respond via useAITurn
+                  if (playerConfigs?.[p.id]?.isAI) return null;
+                  const canAccept = hasResources(p.resources, state.pendingTrade!.requesting);
                   return (
                     <button
                       key={p.id}
                       onClick={() => onAcceptTrade(p.id)}
+                      disabled={!canAccept}
+                      title={canAccept ? undefined : 'Not enough resources'}
                       style={{
                         padding: isMobile ? '10px 14px' : '6px 12px', fontSize: 12,
-                        backgroundColor: '#27ae60', color: 'white',
-                        border: 'none', borderRadius: 4, cursor: 'pointer',
+                        backgroundColor: canAccept ? '#27ae60' : '#95a5a6',
+                        color: 'white',
+                        border: 'none', borderRadius: 4,
+                        cursor: canAccept ? 'pointer' : 'default',
+                        opacity: canAccept ? 1 : 0.6,
                       }}
                     >
                       {p.name} accepts
@@ -254,7 +265,7 @@ function DomesticTradeUI({
 
   const adjustRequest = (r: ResourceType, delta: number) => {
     const newVal = requesting[r] + delta;
-    if (newVal < 0) return;
+    if (newVal < 0 || newVal > 19) return;
     setRequesting({ ...requesting, [r]: newVal });
   };
 
