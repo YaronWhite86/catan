@@ -280,6 +280,8 @@ export function Game({ state, dispatch, error, onNewGame, playerConfigs, mySeat,
 
                 <TradePanel
                   state={state}
+                  mySeat={mySeat}
+                  isOnline={isOnline}
                   onMaritimeTrade={(give, receive) =>
                     dispatch({ type: 'MARITIME_TRADE', player: state.currentPlayer, give, receive })
                   }
@@ -319,6 +321,25 @@ export function Game({ state, dispatch, error, onNewGame, playerConfigs, mySeat,
                 Place a road ({state.roadBuildingRoadsLeft} remaining)
               </div>
             )}
+          </div>
+        )}
+
+        {/* Pending trade notification for non-current players in online mode */}
+        {isOnline && controlsDisabled && state.pendingTrade && mySeat != null && state.pendingTrade.from !== mySeat && (
+          <div style={{ marginBottom: 16 }}>
+            <TradePanel
+              state={state}
+              mySeat={mySeat}
+              isOnline
+              onMaritimeTrade={() => {}}
+              onProposeTrade={() => {}}
+              onAcceptTrade={(player) =>
+                dispatch({ type: 'ACCEPT_DOMESTIC_TRADE', player })
+              }
+              onRejectTrade={(player) =>
+                dispatch({ type: 'REJECT_DOMESTIC_TRADE', player })
+              }
+            />
           </div>
         )}
 

@@ -8,6 +8,8 @@ import { useIsMobile } from '../../hooks/useIsMobile';
 
 interface TradePanelProps {
   state: GameState;
+  mySeat?: number | null;
+  isOnline?: boolean;
   onMaritimeTrade: (give: ResourceType, receive: ResourceType) => void;
   onProposeTrade: (offering: ResourceCount, requesting: ResourceCount) => void;
   onAcceptTrade: (player: PlayerId) => void;
@@ -16,6 +18,8 @@ interface TradePanelProps {
 
 export function TradePanel({
   state,
+  mySeat,
+  isOnline,
   onMaritimeTrade,
   onProposeTrade,
   onAcceptTrade,
@@ -40,32 +44,81 @@ export function TradePanel({
             <div>Requesting: {formatResources(state.pendingTrade.requesting)}</div>
           </div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            {state.players.map((p) => {
-              if (p.id === state.pendingTrade!.from) return null;
-              return (
+            {isOnline && mySeat != null ? (
+              // Online mode
+              state.pendingTrade!.from === mySeat ? (
+                // I am the proposer — show waiting + cancel
+                <>
+                  <span style={{ fontSize: 13, color: '#666', alignSelf: 'center' }}>
+                    Waiting for responses...
+                  </span>
+                  <button
+                    onClick={() => onRejectTrade(mySeat as PlayerId)}
+                    style={{
+                      padding: isMobile ? '10px 14px' : '6px 12px', fontSize: 12,
+                      backgroundColor: '#e74c3c', color: 'white',
+                      border: 'none', borderRadius: 4, cursor: 'pointer',
+                    }}
+                  >
+                    Cancel
+                  </button>
+                </>
+              ) : (
+                // I am NOT the proposer — show my accept + reject
+                <>
+                  <button
+                    onClick={() => onAcceptTrade(mySeat as PlayerId)}
+                    style={{
+                      padding: isMobile ? '10px 14px' : '6px 12px', fontSize: 12,
+                      backgroundColor: '#27ae60', color: 'white',
+                      border: 'none', borderRadius: 4, cursor: 'pointer',
+                    }}
+                  >
+                    Accept
+                  </button>
+                  <button
+                    onClick={() => onRejectTrade(mySeat as PlayerId)}
+                    style={{
+                      padding: isMobile ? '10px 14px' : '6px 12px', fontSize: 12,
+                      backgroundColor: '#e74c3c', color: 'white',
+                      border: 'none', borderRadius: 4, cursor: 'pointer',
+                    }}
+                  >
+                    Reject
+                  </button>
+                </>
+              )
+            ) : (
+              // Local hotseat mode — accept buttons for all players
+              <>
+                {state.players.map((p) => {
+                  if (p.id === state.pendingTrade!.from) return null;
+                  return (
+                    <button
+                      key={p.id}
+                      onClick={() => onAcceptTrade(p.id)}
+                      style={{
+                        padding: isMobile ? '10px 14px' : '6px 12px', fontSize: 12,
+                        backgroundColor: '#27ae60', color: 'white',
+                        border: 'none', borderRadius: 4, cursor: 'pointer',
+                      }}
+                    >
+                      {p.name} accepts
+                    </button>
+                  );
+                })}
                 <button
-                  key={p.id}
-                  onClick={() => onAcceptTrade(p.id)}
+                  onClick={() => onRejectTrade(state.currentPlayer)}
                   style={{
                     padding: isMobile ? '10px 14px' : '6px 12px', fontSize: 12,
-                    backgroundColor: '#27ae60', color: 'white',
+                    backgroundColor: '#e74c3c', color: 'white',
                     border: 'none', borderRadius: 4, cursor: 'pointer',
                   }}
                 >
-                  {p.name} accepts
+                  Cancel
                 </button>
-              );
-            })}
-            <button
-              onClick={() => onRejectTrade(state.currentPlayer)}
-              style={{
-                padding: isMobile ? '10px 14px' : '6px 12px', fontSize: 12,
-                backgroundColor: '#e74c3c', color: 'white',
-                border: 'none', borderRadius: 4, cursor: 'pointer',
-              }}
-            >
-              Cancel
-            </button>
+              </>
+            )}
           </div>
         </div>
       )}
