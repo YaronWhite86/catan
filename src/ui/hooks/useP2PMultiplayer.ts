@@ -9,10 +9,19 @@ import type {
   SeatConfig,
   RoomInfo,
 } from '@shared/multiplayer-types';
-import type { UseMultiplayerResult } from './useMultiplayer';
 import { P2PHostManager } from '../p2p/p2p-host-manager';
 
-export interface UseP2PMultiplayerResult extends UseMultiplayerResult {
+export interface UseP2PMultiplayerResult {
+  state: GameState | null;
+  roomInfo: RoomInfo | null;
+  mySeat: number | null;
+  error: string | null;
+  isConnected: boolean;
+  createRoom: (seats: SeatConfig[]) => void;
+  joinRoom: (roomId: string, name: string) => void;
+  startGame: () => void;
+  dispatch: (action: GameAction) => void;
+  endRoom: () => void;
   peerId: string | null;
   isHost: boolean;
 }
