@@ -10,6 +10,7 @@ import { Game } from './ui/components/Game';
 import { LobbyScreen } from './ui/components/Lobby/LobbyScreen';
 import { JoinScreen } from './ui/components/Lobby/JoinScreen';
 import { useMultiplayer } from './ui/hooks/useMultiplayer';
+import { useP2PMultiplayer } from './ui/hooks/useP2PMultiplayer';
 
 type InternalAction = GameAction | { type: '__RESET__'; state: GameState };
 
@@ -20,7 +21,9 @@ function internalReducer(state: GameState, action: InternalAction): GameState {
   return gameReducer(state, action as GameAction);
 }
 
-type AppMode = 'setup' | 'local-game' | 'online-lobby' | 'online-joining' | 'online-game';
+type AppMode = 'setup' | 'local-game'
+  | 'online-lobby' | 'online-joining' | 'online-game'
+  | 'p2p-lobby' | 'p2p-joining' | 'p2p-game';
 
 function App() {
   // Local game state
@@ -35,11 +38,13 @@ function App() {
 
   // Online game state
   const mp = useMultiplayer();
+  const p2p = useP2PMultiplayer();
 
-  // Check URL for room param on mount
+  // Check URL for room/peer param on mount
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const roomId = params.get('room');
+    const peerId = params.get('peer');
     if (roomId) {
       // Check if we have a stored session for reconnection
       const stored = localStorage.getItem(`catan:room:${roomId}`);
@@ -50,6 +55,8 @@ function App() {
       } else {
         setMode('online-joining');
       }
+    } else if (peerId) {
+      setMode('p2p-joining');
     }
     // Only run on mount
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -70,6 +77,22 @@ function App() {
       }
     }
   }, [mode, mp.mySeat, mp.roomInfo]);
+
+  // P2P: Transition from joining/lobby to game when state arrives
+  useEffect(() => {
+    if (p2p.state && (mode === 'p2p-lobby' || mode === 'p2p-joining')) {
+      setMode('p2p-game');
+    }
+  }, [p2p.state, mode]);
+
+  // P2P: Transition from joining to lobby when we get a seat and room info
+  useEffect(() => {
+    if (mode === 'p2p-joining' && p2p.mySeat !== null && p2p.roomInfo) {
+      if (p2p.roomInfo.phase === 'waiting') {
+        setMode('p2p-lobby');
+      }
+    }
+  }, [mode, p2p.mySeat, p2p.roomInfo]);
 
   // Local game handlers
   const dispatch = useCallback(
@@ -135,13 +158,41 @@ function App() {
     [mp],
   );
 
+  const handleCreateP2P = useCallback(
+    (_playerCount: number, configs: PlayerConfig[], names: string[]) => {
+      // Convert PlayerConfig[] to SeatConfig[] (same logic as online)
+      const seats: SeatConfig[] = configs.map((c, i) => {
+        if (c.isAI) {
+          return {
+            type: 'ai' as const,
+            name: names[i]?.trim() || undefined,
+            difficulty: c.difficulty,
+            strategyType: c.strategyType,
+          };
+        }
+        // First human is the host (human-local), others are remote
+        const isFirstHuman = configs.slice(0, i).every(pc => pc.isAI);
+        return {
+          type: isFirstHuman ? 'human-local' as const : 'human-remote' as const,
+          name: names[i]?.trim() || undefined,
+        };
+      });
+
+      setPlayerConfigs(configs);
+      p2p.createRoom(seats);
+      setMode('p2p-lobby');
+    },
+    [p2p],
+  );
+
   const handleNewGame = useCallback(() => {
     setMode('setup');
     setPlayerConfigs([]);
     setError(null);
-    // Clear room URL param
+    // Clear room/peer URL params
     const url = new URL(window.location.href);
     url.searchParams.delete('room');
+    url.searchParams.delete('peer');
     window.history.replaceState({}, '', url.toString());
   }, []);
 
@@ -149,13 +200,14 @@ function App() {
     setMode('setup');
     const url = new URL(window.location.href);
     url.searchParams.delete('room');
+    url.searchParams.delete('peer');
     window.history.replaceState({}, '', url.toString());
   }, []);
 
   // ─── Render based on mode ───────────────────────────
 
   if (mode === 'setup') {
-    return <SetupScreen onStart={handleStart} onCreateOnline={handleCreateOnline} />;
+    return <SetupScreen onStart={handleStart} onCreateOnline={handleCreateOnline} onCreateP2P={handleCreateP2P} />;
   }
 
   if (mode === 'local-game') {
@@ -261,6 +313,107 @@ function App() {
         onNewGame={handleNewGame}
         playerConfigs={onlineConfigs}
         mySeat={mp.mySeat}
+        isOnline
+      />
+    );
+  }
+
+  if (mode === 'p2p-joining') {
+    const params = new URLSearchParams(window.location.search);
+    const hostPeerId = params.get('peer') ?? '';
+
+    // If we already have a seat and state, we're reconnecting — show game
+    if (p2p.mySeat !== null && p2p.state) {
+      return (
+        <Game
+          state={p2p.state}
+          dispatch={p2p.dispatch}
+          error={p2p.error}
+          onNewGame={handleNewGame}
+          playerConfigs={playerConfigs}
+          mySeat={p2p.mySeat}
+          isOnline
+        />
+      );
+    }
+
+    return (
+      <JoinScreen
+        roomId={hostPeerId}
+        roomInfo={p2p.roomInfo}
+        error={p2p.error}
+        isConnected={p2p.isConnected}
+        onJoin={(rid, name) => {
+          p2p.joinRoom(rid, name);
+        }}
+        onBack={handleBack}
+        isP2P
+      />
+    );
+  }
+
+  if (mode === 'p2p-lobby') {
+    if (!p2p.roomInfo) {
+      return (
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          minHeight: '100vh', color: '#666',
+        }}>
+          Setting up P2P connection...
+        </div>
+      );
+    }
+
+    const p2pShareUrl = p2p.peerId
+      ? `${window.location.origin}${window.location.pathname}?peer=${p2p.peerId}`
+      : '';
+
+    return (
+      <LobbyScreen
+        roomId={p2p.peerId ?? ''}
+        roomInfo={p2p.roomInfo}
+        mySeat={p2p.mySeat ?? 0}
+        isConnected={p2p.isConnected}
+        onStartGame={p2p.startGame}
+        onEndRoom={() => {
+          p2p.endRoom();
+          handleBack();
+        }}
+        onBack={handleBack}
+        title="P2P Game Lobby"
+        subtitle="Direct connection (no server)"
+        shareUrl={p2pShareUrl}
+      />
+    );
+  }
+
+  if (mode === 'p2p-game') {
+    if (!p2p.state) {
+      return (
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          minHeight: '100vh', color: '#666',
+        }}>
+          Waiting for game state...
+        </div>
+      );
+    }
+
+    // Build playerConfigs from room info for the Game component
+    const p2pConfigs: PlayerConfig[] = (p2p.roomInfo?.seats ?? []).map(s => ({
+      isAI: s.config.type === 'ai',
+      difficulty: s.config.difficulty ?? 'medium',
+      strategyType: s.config.strategyType ?? 'heuristic',
+    }));
+
+    return (
+      <Game
+        state={p2p.state}
+        dispatch={p2p.dispatch}
+        error={p2p.error}
+        onNewGame={handleNewGame}
+        playerConfigs={p2pConfigs}
+        mySeat={p2p.mySeat}
         isOnline
       />
     );

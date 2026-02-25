@@ -6,11 +6,12 @@ import { useIsMobile } from '../../hooks/useIsMobile';
 interface SetupScreenProps {
   onStart: (names: string[], playerCount: number, playerConfigs: PlayerConfig[]) => void;
   onCreateOnline?: (playerCount: number, configs: PlayerConfig[], names: string[]) => void;
+  onCreateP2P?: (playerCount: number, configs: PlayerConfig[], names: string[]) => void;
 }
 
 const DEFAULT_CONFIG: PlayerConfig = { isAI: false, difficulty: 'medium', strategyType: 'heuristic' };
 
-export function SetupScreen({ onStart, onCreateOnline }: SetupScreenProps) {
+export function SetupScreen({ onStart, onCreateOnline, onCreateP2P }: SetupScreenProps) {
   const isMobile = useIsMobile();
   const [playerCount, setPlayerCount] = useState(4);
   const [names, setNames] = useState(['', '', '', '']);
@@ -202,6 +203,20 @@ export function SetupScreen({ onStart, onCreateOnline }: SetupScreenProps) {
             }}
           >
             Create Online Game
+          </button>
+        )}
+
+        {onCreateP2P && (
+          <button
+            onClick={() => onCreateP2P(playerCount, configs.slice(0, playerCount), names.slice(0, playerCount))}
+            style={{
+              width: '100%', padding: '14px', fontSize: 16,
+              backgroundColor: '#8e44ad', color: 'white',
+              border: 'none', borderRadius: 8, cursor: 'pointer',
+              fontWeight: 'bold', marginTop: 8,
+            }}
+          >
+            Host P2P Game (No Server)
           </button>
         )}
       </div>

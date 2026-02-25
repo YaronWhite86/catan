@@ -10,6 +10,7 @@ interface JoinScreenProps {
   isConnected: boolean;
   onJoin: (roomId: string, name: string) => void;
   onBack: () => void;
+  isP2P?: boolean;
 }
 
 export function JoinScreen({
@@ -19,6 +20,7 @@ export function JoinScreen({
   isConnected,
   onJoin,
   onBack,
+  isP2P,
 }: JoinScreenProps) {
   const isMobile = useIsMobile();
   const [name, setName] = useState('');
@@ -42,7 +44,7 @@ export function JoinScreen({
           Join Game
         </h1>
         <p style={{ textAlign: 'center', color: '#7f8c8d', marginBottom: 20, fontSize: 14 }}>
-          Room: <strong>{roomId}</strong>
+          {isP2P ? 'Game' : 'Room'}: <strong>{roomId}</strong>
           {!isConnected && <span style={{ color: '#e74c3c', marginLeft: 8 }}>Connecting...</span>}
         </p>
 

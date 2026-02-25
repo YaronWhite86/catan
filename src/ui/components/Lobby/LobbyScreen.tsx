@@ -11,6 +11,9 @@ interface LobbyScreenProps {
   onStartGame: () => void;
   onEndRoom: () => void;
   onBack: () => void;
+  title?: string;
+  subtitle?: string;
+  shareUrl?: string;
 }
 
 export function LobbyScreen({
@@ -21,11 +24,14 @@ export function LobbyScreen({
   onStartGame,
   onEndRoom,
   onBack,
+  title,
+  subtitle,
+  shareUrl: shareUrlProp,
 }: LobbyScreenProps) {
   const isMobile = useIsMobile();
   const [copied, setCopied] = useState(false);
 
-  const shareUrl = `${window.location.origin}${window.location.pathname}?room=${roomId}`;
+  const shareUrl = shareUrlProp ?? `${window.location.origin}${window.location.pathname}?room=${roomId}`;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(shareUrl).then(() => {
@@ -49,10 +55,10 @@ export function LobbyScreen({
         boxShadow: '0 8px 40px rgba(0,0,0,0.2)', maxWidth: 480, width: '100%',
       }}>
         <h1 style={{ textAlign: 'center', margin: '0 0 4px', color: '#2c3e50', fontSize: 24 }}>
-          Online Game Lobby
+          {title ?? 'Online Game Lobby'}
         </h1>
         <p style={{ textAlign: 'center', color: '#7f8c8d', marginBottom: 20, fontSize: 14 }}>
-          Room: <strong>{roomId}</strong>
+          {subtitle ?? <>Room: <strong>{roomId}</strong></>}
           {!isConnected && <span style={{ color: '#e74c3c', marginLeft: 8 }}>Disconnected</span>}
         </p>
 
