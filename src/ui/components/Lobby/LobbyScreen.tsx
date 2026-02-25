@@ -68,6 +68,11 @@ export function LobbyScreen({
           borderRadius: 8, border: '1px solid #d0e0f0',
         }}>
           <div style={{ fontSize: 12, color: '#666', marginBottom: 6 }}>Share this link:</div>
+          {shareUrl.includes('<YOUR_LAN_IP>') && (
+            <div style={{ fontSize: 11, color: '#e67e22', marginBottom: 6 }}>
+              Replace <code>&lt;YOUR_LAN_IP&gt;</code> with your computer's local IP address (e.g. 192.168.1.x). Other devices cannot connect via &quot;localhost&quot;.
+            </div>
+          )}
           <div style={{ display: 'flex', gap: 8 }}>
             <input
               readOnly

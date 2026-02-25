@@ -364,9 +364,15 @@ function App() {
       );
     }
 
-    const p2pShareUrl = p2p.peerId
-      ? `${window.location.origin}${window.location.pathname}?peer=${p2p.peerId}`
-      : '';
+    // Build share URL — replace localhost with LAN-accessible hostname hint
+    let p2pShareUrl = '';
+    if (p2p.peerId) {
+      const loc = window.location;
+      const isLocalhost = loc.hostname === 'localhost' || loc.hostname === '127.0.0.1';
+      const host = isLocalhost ? `<YOUR_LAN_IP>:${loc.port}` : loc.host;
+      const proto = loc.protocol;
+      p2pShareUrl = `${proto}//${host}${loc.pathname}?peer=${p2p.peerId}`;
+    }
 
     return (
       <LobbyScreen
