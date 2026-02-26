@@ -100,21 +100,21 @@ export const SPECIFIC_PORT_RATIO = 2;
 // ─── Player Colors ──────────────────────────────────
 
 export const PLAYER_COLORS: readonly string[] = [
-  '#e74c3c', // red
-  '#3498db', // blue
-  '#f39c12', // orange
-  '#2ecc71', // green
+  '#e04040', // red
+  '#3080d0', // blue
+  '#e89020', // orange
+  '#28b860', // green
 ];
 
 // ─── Resource Colors ────────────────────────────────
 
 export const TERRAIN_COLORS: Record<TerrainType, string> = {
   forest: '#2d7a2d',
-  hills: '#c45a2d',
+  hills: '#b85a30',
   pasture: '#7ec850',
   fields: '#daa520',
-  mountains: '#808080',
-  desert: '#f0d9a0',
+  mountains: '#78838e',
+  desert: '#e8d5a8',
 };
 
 export const RESOURCE_LABELS: Record<ResourceType, string> = {

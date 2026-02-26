@@ -3,6 +3,7 @@ import { HexTile } from './HexTile';
 import { Vertex } from './Vertex';
 import { Edge } from './Edge';
 import { Harbor } from './Harbor';
+import { TERRAIN_GRADIENT_STOPS, PLAYER_GRADIENT_STOPS } from './board-theme';
 
 interface BoardSVGProps {
   state: GameState;
@@ -12,6 +13,59 @@ interface BoardSVGProps {
   onVertexClick?: (vid: VertexId) => void;
   onEdgeClick?: (eid: EdgeId) => void;
   onHexClick?: (hid: HexId) => void;
+}
+
+function BoardDefs() {
+  return (
+    <defs>
+      {/* ── Filters ── */}
+      <filter id="drop-shadow-sm" x="-20%" y="-20%" width="140%" height="140%">
+        <feDropShadow dx="0" dy="1" stdDeviation="1.2" floodColor="#000" floodOpacity="0.35" />
+      </filter>
+      <filter id="drop-shadow-lg" x="-30%" y="-30%" width="160%" height="160%">
+        <feDropShadow dx="0" dy="2" stdDeviation="2.5" floodColor="#000" floodOpacity="0.45" />
+      </filter>
+      <filter id="token-emboss" x="-20%" y="-20%" width="140%" height="140%">
+        <feDropShadow dx="0" dy="-0.5" stdDeviation="0.4" floodColor="#fff" floodOpacity="0.6" />
+        <feDropShadow dx="0" dy="0.8" stdDeviation="0.6" floodColor="#000" floodOpacity="0.25" />
+      </filter>
+      <filter id="hex-inner-shadow" x="-5%" y="-5%" width="110%" height="110%">
+        <feComponentTransfer in="SourceAlpha">
+          <feFuncA type="table" tableValues="1 0" />
+        </feComponentTransfer>
+        <feGaussianBlur stdDeviation="3" />
+        <feOffset dx="0" dy="1" result="shadow" />
+        <feFlood floodColor="#000" floodOpacity="0.15" result="color" />
+        <feComposite in="color" in2="shadow" operator="in" result="innerShadow" />
+        <feComposite in="SourceGraphic" in2="innerShadow" operator="over" />
+      </filter>
+
+      {/* ── Terrain Gradients ── */}
+      {(Object.entries(TERRAIN_GRADIENT_STOPS) as [string, { light: string; mid: string; dark: string }][]).map(
+        ([terrain, stops]) => (
+          <radialGradient key={terrain} id={`grad-${terrain}`} cx="40%" cy="35%" r="65%">
+            <stop offset="0%" stopColor={stops.light} />
+            <stop offset="50%" stopColor={stops.mid} />
+            <stop offset="100%" stopColor={stops.dark} />
+          </radialGradient>
+        ),
+      )}
+
+      {/* ── Player Gradients ── */}
+      {PLAYER_GRADIENT_STOPS.map((stops, i) => (
+        <linearGradient key={i} id={`player-grad-${i}`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={stops.light} />
+          <stop offset="100%" stopColor={stops.dark} />
+        </linearGradient>
+      ))}
+
+      {/* ── Token Gradient ── */}
+      <radialGradient id="grad-token" cx="40%" cy="35%" r="60%">
+        <stop offset="0%" stopColor="#fff8e8" />
+        <stop offset="100%" stopColor="#e8d8b0" />
+      </radialGradient>
+    </defs>
+  );
 }
 
 export function BoardSVG({
@@ -44,6 +98,8 @@ export function BoardSVG({
       viewBox={`${vbX} ${vbY} ${vbW} ${vbH}`}
       style={{ width: '100%', height: 'auto', display: 'block', margin: '0 auto' }}
     >
+      <BoardDefs />
+
       {/* Ocean background */}
       <rect x={vbX} y={vbY} width={vbW} height={vbH} fill="#2980b9" rx={8} />
 
