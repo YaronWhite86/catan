@@ -29,17 +29,6 @@ function BoardDefs() {
         <feDropShadow dx="0" dy="-0.5" stdDeviation="0.4" floodColor="#fff" floodOpacity="0.6" />
         <feDropShadow dx="0" dy="0.8" stdDeviation="0.6" floodColor="#000" floodOpacity="0.25" />
       </filter>
-      <filter id="hex-inner-shadow" x="-5%" y="-5%" width="110%" height="110%">
-        <feComponentTransfer in="SourceAlpha">
-          <feFuncA type="table" tableValues="1 0" />
-        </feComponentTransfer>
-        <feGaussianBlur stdDeviation="3" />
-        <feOffset dx="0" dy="1" result="shadow" />
-        <feFlood floodColor="#000" floodOpacity="0.15" result="color" />
-        <feComposite in="color" in2="shadow" operator="in" result="innerShadow" />
-        <feComposite in="SourceGraphic" in2="innerShadow" operator="over" />
-      </filter>
-
       {/* ── Terrain Gradients ── */}
       {(Object.entries(TERRAIN_GRADIENT_STOPS) as [string, { light: string; mid: string; dark: string }][]).map(
         ([terrain, stops]) => (

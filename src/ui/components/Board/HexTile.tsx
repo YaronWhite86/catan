@@ -17,7 +17,6 @@ export function HexTile({ hex, center, hasRobber }: HexTileProps) {
       <polygon
         points={points}
         fill={`url(#grad-${hex.terrain})`}
-        filter="url(#hex-inner-shadow)"
         stroke="#4a3520"
         strokeWidth={1.5}
         strokeLinejoin="round"
@@ -124,14 +123,14 @@ function TerrainDecoration({ terrain, cx, cy }: { terrain: TerrainType; cx: numb
 }
 
 function ForestDecoration({ cx, cy }: { cx: number; cy: number }) {
-  // 3 evergreen trees with trunks
+  // 3 evergreen trees in lower half of hex
   const trees = [
-    { x: cx - 14, y: cy - 10 },
-    { x: cx + 2, y: cy - 16 },
-    { x: cx + 12, y: cy - 8 },
+    { x: cx - 14, y: cy + 14 },
+    { x: cx + 2, y: cy + 18 },
+    { x: cx + 12, y: cy + 16 },
   ];
   return (
-    <g opacity={0.3}>
+    <g opacity={0.45}>
       {trees.map((t, i) => (
         <g key={i}>
           <rect x={t.x - 1} y={t.y + 8} width={2} height={5} fill="#3d2a12" />
@@ -145,28 +144,28 @@ function ForestDecoration({ cx, cy }: { cx: number; cy: number }) {
 
 function HillsDecoration({ cx, cy }: { cx: number; cy: number }) {
   return (
-    <g opacity={0.25}>
-      {/* Two overlapping hills */}
-      <ellipse cx={cx - 8} cy={cy - 6} rx={16} ry={10} fill="#9e4420" />
-      <ellipse cx={cx + 10} cy={cy - 4} rx={14} ry={9} fill="#b05028" />
+    <g opacity={0.4}>
+      {/* Two overlapping hills in lower half */}
+      <ellipse cx={cx - 8} cy={cy + 16} rx={16} ry={10} fill="#9e4420" />
+      <ellipse cx={cx + 10} cy={cy + 18} rx={14} ry={9} fill="#b05028" />
       {/* Brick-pattern lines */}
-      <line x1={cx - 18} y1={cy - 6} x2={cx - 2} y2={cy - 6} stroke="#6a2e14" strokeWidth={0.8} />
-      <line x1={cx - 14} y1={cy - 2} x2={cx + 2} y2={cy - 2} stroke="#6a2e14" strokeWidth={0.8} />
-      <line x1={cx + 2} y1={cy - 4} x2={cx + 20} y2={cy - 4} stroke="#6a2e14" strokeWidth={0.8} />
+      <line x1={cx - 18} y1={cy + 16} x2={cx - 2} y2={cy + 16} stroke="#6a2e14" strokeWidth={0.8} />
+      <line x1={cx - 14} y1={cy + 20} x2={cx + 2} y2={cy + 20} stroke="#6a2e14" strokeWidth={0.8} />
+      <line x1={cx + 2} y1={cy + 18} x2={cx + 20} y2={cy + 18} stroke="#6a2e14" strokeWidth={0.8} />
     </g>
   );
 }
 
 function PastureDecoration({ cx, cy }: { cx: number; cy: number }) {
   return (
-    <g opacity={0.3}>
-      {/* Grass tufts */}
-      <path d={`M${cx - 18},${cy - 4} Q${cx - 16},${cy - 10} ${cx - 14},${cy - 4}`} fill="none" stroke="#3a8a28" strokeWidth={1.2} />
-      <path d={`M${cx - 16},${cy - 4} Q${cx - 14},${cy - 9} ${cx - 12},${cy - 4}`} fill="none" stroke="#3a8a28" strokeWidth={1.2} />
-      <path d={`M${cx + 12},${cy - 6} Q${cx + 14},${cy - 12} ${cx + 16},${cy - 6}`} fill="none" stroke="#3a8a28" strokeWidth={1.2} />
-      <path d={`M${cx + 14},${cy - 6} Q${cx + 16},${cy - 11} ${cx + 18},${cy - 6}`} fill="none" stroke="#3a8a28" strokeWidth={1.2} />
+    <g opacity={0.45}>
+      {/* Grass tufts in lower half */}
+      <path d={`M${cx - 18},${cy + 20} Q${cx - 16},${cy + 14} ${cx - 14},${cy + 20}`} fill="none" stroke="#3a8a28" strokeWidth={1.2} />
+      <path d={`M${cx - 16},${cy + 20} Q${cx - 14},${cy + 15} ${cx - 12},${cy + 20}`} fill="none" stroke="#3a8a28" strokeWidth={1.2} />
+      <path d={`M${cx + 12},${cy + 20} Q${cx + 14},${cy + 14} ${cx + 16},${cy + 20}`} fill="none" stroke="#3a8a28" strokeWidth={1.2} />
+      <path d={`M${cx + 14},${cy + 20} Q${cx + 16},${cy + 15} ${cx + 18},${cy + 20}`} fill="none" stroke="#3a8a28" strokeWidth={1.2} />
       {/* Small sheep silhouette */}
-      <g transform={`translate(${cx - 2},${cy - 10})`}>
+      <g transform={`translate(${cx - 2},${cy + 16})`}>
         {/* Fluffy body */}
         <ellipse cx={0} cy={0} rx={6} ry={4} fill="#e8e8e0" />
         {/* Head */}
@@ -180,18 +179,18 @@ function PastureDecoration({ cx, cy }: { cx: number; cy: number }) {
 }
 
 function FieldsDecoration({ cx, cy }: { cx: number; cy: number }) {
-  // 3 wheat stalks
+  // 3 wheat stalks in lower half of hex
   const stalks = [
-    { x: cx - 10, y: cy - 6 },
-    { x: cx, y: cy - 10 },
-    { x: cx + 10, y: cy - 6 },
+    { x: cx - 10, y: cy + 14 },
+    { x: cx, y: cy + 12 },
+    { x: cx + 10, y: cy + 14 },
   ];
   return (
-    <g opacity={0.3}>
+    <g opacity={0.45}>
       {stalks.map((s, i) => (
         <g key={i}>
           {/* Stalk */}
-          <line x1={s.x} y1={s.y + 12} x2={s.x} y2={s.y - 4} stroke="#8a6a10" strokeWidth={1} />
+          <line x1={s.x} y1={s.y + 14} x2={s.x} y2={s.y - 4} stroke="#8a6a10" strokeWidth={1} />
           {/* Grain kernels */}
           <ellipse cx={s.x - 2} cy={s.y - 2} rx={1.5} ry={3} fill="#c89e20" transform={`rotate(-15,${s.x - 2},${s.y - 2})`} />
           <ellipse cx={s.x + 2} cy={s.y - 2} rx={1.5} ry={3} fill="#c89e20" transform={`rotate(15,${s.x + 2},${s.y - 2})`} />
@@ -204,33 +203,33 @@ function FieldsDecoration({ cx, cy }: { cx: number; cy: number }) {
 
 function MountainsDecoration({ cx, cy }: { cx: number; cy: number }) {
   return (
-    <g opacity={0.3}>
-      {/* Back peak */}
-      <polygon points={`${cx + 6},${cy - 20} ${cx + 22},${cy} ${cx - 10},${cy}`} fill="#555e68" />
+    <g opacity={0.45}>
+      {/* Back peak in lower half */}
+      <polygon points={`${cx + 6},${cy + 6} ${cx + 22},${cy + 26} ${cx - 10},${cy + 26}`} fill="#555e68" />
       {/* Snow cap back */}
-      <polygon points={`${cx + 6},${cy - 20} ${cx + 10},${cy - 14} ${cx + 2},${cy - 14}`} fill="#e8e8f0" />
+      <polygon points={`${cx + 6},${cy + 6} ${cx + 10},${cy + 12} ${cx + 2},${cy + 12}`} fill="#e8e8f0" />
       {/* Front peak */}
-      <polygon points={`${cx - 8},${cy - 16} ${cx + 10},${cy + 2} ${cx - 26},${cy + 2}`} fill="#6a7580" />
+      <polygon points={`${cx - 8},${cy + 10} ${cx + 10},${cy + 30} ${cx - 26},${cy + 30}`} fill="#6a7580" />
       {/* Snow cap front */}
-      <polygon points={`${cx - 8},${cy - 16} ${cx - 4},${cy - 10} ${cx - 12},${cy - 10}`} fill="#f0f0f8" />
+      <polygon points={`${cx - 8},${cy + 10} ${cx - 4},${cy + 16} ${cx - 12},${cy + 16}`} fill="#f0f0f8" />
     </g>
   );
 }
 
 function DesertDecoration({ cx, cy }: { cx: number; cy: number }) {
   return (
-    <g opacity={0.28}>
-      {/* Dune curves */}
+    <g opacity={0.4}>
+      {/* Dune curves in lower half */}
       <path
-        d={`M${cx - 22},${cy - 2} Q${cx - 10},${cy - 10} ${cx},${cy - 4} Q${cx + 10},${cy + 2} ${cx + 22},${cy - 4}`}
+        d={`M${cx - 22},${cy + 16} Q${cx - 10},${cy + 10} ${cx},${cy + 14} Q${cx + 10},${cy + 20} ${cx + 22},${cy + 14}`}
         fill="none" stroke="#b8a060" strokeWidth={1.5}
       />
       <path
-        d={`M${cx - 18},${cy + 4} Q${cx - 6},${cy - 2} ${cx + 6},${cy + 2} Q${cx + 14},${cy + 6} ${cx + 20},${cy + 2}`}
+        d={`M${cx - 18},${cy + 22} Q${cx - 6},${cy + 16} ${cx + 6},${cy + 20} Q${cx + 14},${cy + 24} ${cx + 20},${cy + 20}`}
         fill="none" stroke="#b8a060" strokeWidth={1}
       />
       {/* Small cactus */}
-      <g transform={`translate(${cx + 4},${cy - 10})`}>
+      <g transform={`translate(${cx + 4},${cy + 12})`}>
         <rect x={-1.5} y={0} width={3} height={10} rx={1.5} fill="#5a8a38" />
         <rect x={-6} y={2} width={4.5} height={3} rx={1.5} fill="#5a8a38" />
         <rect x={-6} y={-1} width={3} height={3} rx={1.5} fill="#5a8a38" />
