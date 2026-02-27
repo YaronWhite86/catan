@@ -176,6 +176,7 @@ function validateSteal(
 function validateBuildRoad(state: GameState, player: PlayerId, edge: number): ValidationResult {
   if (state.phase !== 'TRADE_BUILD_PLAY') return fail('Not in build phase');
   if (state.currentPlayer !== player) return fail('Not your turn');
+  if (state.pendingTrade !== null) return fail('Cannot build while trade is pending');
 
   const valid = getValidRoadEdges(state, player);
   if (!valid.includes(edge)) return fail('Invalid road location or insufficient resources');
@@ -186,6 +187,7 @@ function validateBuildRoad(state: GameState, player: PlayerId, edge: number): Va
 function validateBuildSettlement(state: GameState, player: PlayerId, vertex: number): ValidationResult {
   if (state.phase !== 'TRADE_BUILD_PLAY') return fail('Not in build phase');
   if (state.currentPlayer !== player) return fail('Not your turn');
+  if (state.pendingTrade !== null) return fail('Cannot build while trade is pending');
 
   const valid = getValidSettlementVertices(state, player);
   if (!valid.includes(vertex)) return fail('Invalid settlement location or insufficient resources');
@@ -196,6 +198,7 @@ function validateBuildSettlement(state: GameState, player: PlayerId, vertex: num
 function validateBuildCity(state: GameState, player: PlayerId, vertex: number): ValidationResult {
   if (state.phase !== 'TRADE_BUILD_PLAY') return fail('Not in build phase');
   if (state.currentPlayer !== player) return fail('Not your turn');
+  if (state.pendingTrade !== null) return fail('Cannot build while trade is pending');
 
   const valid = getValidCityVertices(state, player);
   if (!valid.includes(vertex)) return fail('Invalid city location or insufficient resources');
@@ -206,6 +209,7 @@ function validateBuildCity(state: GameState, player: PlayerId, vertex: number): 
 function validateBuyDevCard(state: GameState, player: PlayerId): ValidationResult {
   if (state.phase !== 'TRADE_BUILD_PLAY') return fail('Not in build phase');
   if (state.currentPlayer !== player) return fail('Not your turn');
+  if (state.pendingTrade !== null) return fail('Cannot build while trade is pending');
   if (!canBuyDevCard(state, player)) return fail('Cannot buy dev card');
 
   return ok();
@@ -323,6 +327,11 @@ function validateAcceptDomesticTrade(state: GameState, player: PlayerId): Valida
   if (state.phase !== 'TRADE_BUILD_PLAY') return fail('Not in trade phase');
   if (state.pendingTrade === null) return fail('No pending trade');
   if (state.pendingTrade.from === player) return fail('Cannot accept own trade');
+
+  // Defensive: re-validate proposer still has offered resources
+  if (!hasResources(state.players[state.pendingTrade.from].resources, state.pendingTrade.offering)) {
+    return fail('Proposer no longer has the offered resources');
+  }
 
   // Check acceptor has the requested resources
   if (!hasResources(state.players[player].resources, state.pendingTrade.requesting)) {
