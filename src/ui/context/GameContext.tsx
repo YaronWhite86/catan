@@ -39,8 +39,12 @@ export function GameProvider({ children }: { children: ReactNode }) {
       } catch (e) {
         if (e instanceof GameError) {
           setError(e.message);
+        } else if (e instanceof Error) {
+          console.error('Unexpected dispatch error:', e);
+          setError(`Unexpected error: ${e.message}`);
         } else {
-          throw e;
+          console.error('Unexpected dispatch error:', e);
+          setError('An unexpected error occurred');
         }
       }
     },

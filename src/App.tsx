@@ -10,6 +10,7 @@ import { Game } from './ui/components/Game';
 import { LobbyScreen } from './ui/components/Lobby/LobbyScreen';
 import { JoinScreen } from './ui/components/Lobby/JoinScreen';
 import { useP2PMultiplayer } from './ui/hooks/useP2PMultiplayer';
+import { ErrorBoundary } from './ui/components/ErrorBoundary';
 
 type InternalAction = GameAction | { type: '__RESET__'; state: GameState };
 
@@ -73,8 +74,12 @@ function App() {
       } catch (e) {
         if (e instanceof GameError) {
           setError(e.message);
+        } else if (e instanceof Error) {
+          console.error('Unexpected dispatch error:', e);
+          setError(`Unexpected error: ${e.message}`);
         } else {
-          throw e;
+          console.error('Unexpected dispatch error:', e);
+          setError('An unexpected error occurred');
         }
       }
     },
@@ -152,13 +157,15 @@ function App() {
 
   if (mode === 'local-game') {
     return (
-      <Game
-        state={state}
-        dispatch={dispatch}
-        error={error}
-        onNewGame={handleNewGame}
-        playerConfigs={playerConfigs}
-      />
+      <ErrorBoundary onNewGame={handleNewGame}>
+        <Game
+          state={state}
+          dispatch={dispatch}
+          error={error}
+          onNewGame={handleNewGame}
+          playerConfigs={playerConfigs}
+        />
+      </ErrorBoundary>
     );
   }
 
@@ -169,15 +176,17 @@ function App() {
     // If we already have a seat and state, we're reconnecting — show game
     if (p2p.mySeat !== null && p2p.state) {
       return (
-        <Game
-          state={p2p.state}
-          dispatch={p2p.dispatch}
-          error={p2p.error}
-          onNewGame={handleNewGame}
-          playerConfigs={playerConfigs}
-          mySeat={p2p.mySeat}
-          isOnline
-        />
+        <ErrorBoundary onNewGame={handleNewGame}>
+          <Game
+            state={p2p.state}
+            dispatch={p2p.dispatch}
+            error={p2p.error}
+            onNewGame={handleNewGame}
+            playerConfigs={playerConfigs}
+            mySeat={p2p.mySeat}
+            isOnline
+          />
+        </ErrorBoundary>
       );
     }
 
@@ -257,15 +266,17 @@ function App() {
     }));
 
     return (
-      <Game
-        state={p2p.state}
-        dispatch={p2p.dispatch}
-        error={p2p.error}
-        onNewGame={handleNewGame}
-        playerConfigs={p2pConfigs}
-        mySeat={p2p.mySeat}
-        isOnline
-      />
+      <ErrorBoundary onNewGame={handleNewGame}>
+        <Game
+          state={p2p.state}
+          dispatch={p2p.dispatch}
+          error={p2p.error}
+          onNewGame={handleNewGame}
+          playerConfigs={p2pConfigs}
+          mySeat={p2p.mySeat}
+          isOnline
+        />
+      </ErrorBoundary>
     );
   }
 

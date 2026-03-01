@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { GameState, PlayerId, ResourceType, ResourceCount } from '@engine/types';
 import { ALL_RESOURCES } from '@engine/types';
 import { RESOURCE_LABELS } from '@engine/constants';
@@ -34,22 +34,25 @@ export function TradePanel({
   return (
     <div style={{ marginTop: 8 }}>
       {/* Pending trade offer */}
-      {state.pendingTrade && (
+      {state.pendingTrade && (() => {
+        const pendingTrade = state.pendingTrade;
+        if (!pendingTrade) return null;
+        return (
         <div style={{
           padding: 12, border: '2px solid #f39c12', borderRadius: 8,
           backgroundColor: '#fef9e7', marginBottom: 8,
         }}>
           <div style={{ fontWeight: 'bold', marginBottom: 6 }}>
-            {state.players[state.pendingTrade.from].name} offers a trade:
+            {state.players[pendingTrade.from].name} offers a trade:
           </div>
           <div style={{ fontSize: 13, marginBottom: 8 }}>
-            <div>Offering: {formatResources(state.pendingTrade.offering)}</div>
-            <div>Requesting: {formatResources(state.pendingTrade.requesting)}</div>
+            <div>Offering: {formatResources(pendingTrade.offering)}</div>
+            <div>Requesting: {formatResources(pendingTrade.requesting)}</div>
           </div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             {isOnline && mySeat != null ? (
               // Online mode
-              state.pendingTrade!.from === mySeat ? (
+              pendingTrade.from === mySeat ? (
                 // I am the proposer — show waiting + cancel
                 <>
                   <span style={{ fontSize: 13, color: '#666', alignSelf: 'center' }}>
@@ -95,10 +98,10 @@ export function TradePanel({
               // Local hotseat mode — accept buttons for human players only
               <>
                 {state.players.map((p) => {
-                  if (p.id === state.pendingTrade!.from) return null;
+                  if (p.id === pendingTrade.from) return null;
                   // Skip AI players — they auto-respond via useAITurn
                   if (playerConfigs?.[p.id]?.isAI) return null;
-                  const canAccept = hasResources(p.resources, state.pendingTrade!.requesting);
+                  const canAccept = hasResources(p.resources, pendingTrade.requesting);
                   return (
                     <button
                       key={p.id}
@@ -132,7 +135,8 @@ export function TradePanel({
             )}
           </div>
         </div>
-      )}
+        );
+      })()}
 
       {!state.pendingTrade && (
         <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
@@ -183,6 +187,21 @@ function MaritimeTradeUI({
   const [give, setGive] = useState<ResourceType | null>(null);
   const [receive, setReceive] = useState<ResourceType | null>(null);
   const player = state.currentPlayer;
+
+  // Reset stale selections when player resources or bank change
+  useEffect(() => {
+    if (give !== null) {
+      const ratio = getPlayerTradeRatio(state, player, give);
+      if (state.players[player].resources[give] < ratio) {
+        setGive(null);
+      }
+    }
+    if (receive !== null) {
+      if (receive === give || state.bank[receive] <= 0) {
+        setReceive(null);
+      }
+    }
+  }, [state.players[player].resources, state.bank, give, receive, state, player]);
 
   return (
     <div style={{ padding: 8, border: '1px solid #ddd', borderRadius: 6, fontSize: 13 }}>
